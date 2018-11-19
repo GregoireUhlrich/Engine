@@ -1,0 +1,27 @@
+#!/bin/bash
+
+
+read -p "Entrez le nom du fichier à modifier (sans extension ni dossier)" fichier
+read -p "Entrez le type puis le nom de la variable:" type_ variable
+read -p "Entrez le nom de la variable précédente dans la définition de la classe:" previous_variable
+
+header=include/${fichier}.h
+source=src/${fichier}.cpp
+
+let "lenVar = ${#previous_variable}-1"
+part1=${previous_variable:0:1}
+part2=${previous_variable:1:$lenVar}
+maj_previous_variable="${part1^^}$part2"
+
+let "lenVar = ${#variable}-1"
+part1=${variable:0:1}
+part2=${variable:1:$lenVar}
+maj_variable="${part1^^}$part2"
+
+# Ajout de l'attribut
+sed -i 's/${previous_variable};/${previous_variable};\n    $type_ ${variable};/g' $header
+# Ajout de la fonction get
+sed -i 's/get${maj_previous_variable}() const;/get${maj_previous_variable}() const;\n    $type_ get${maj_variable}() const;/g' $header
+# Ajout de la fonction set
+sed -i 's/set${maj_previous_variable}(*) const;/set${maj_previous_variable}(*) const;\n    $type_ get${maj_variable}() const;/g' $header
+

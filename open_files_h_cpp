@@ -1,0 +1,58 @@
+#!/bin/bash
+
+function find_chaine
+{
+    chaine=$1
+    sous_chaine=$2
+    n1=${#chaine}
+    n2=${#sous_chaine}
+    let "n_fin = $n1 - $n2"
+    let "null_pos = -1"
+    let "position = $null_pos"
+    for i in `seq 0 $n_fin`
+    do
+        if [ $position -eq $null_pos ] && [ ${chaine:$i:$n2} == ${sous_chaine:0:$n2} ]
+        then
+            let "position = $i"
+        fi
+    done
+    echo $position
+}
+
+if [ $# -lt 1 ]
+then
+    echo "This programme needs one parameter: the name of the files."
+else
+    file=$1
+    pos=`find_chaine $file ./`
+    if [ $pos -ge 0 ]
+    then
+        let "longueur = ${#file} - 2"
+        let "pos = $pos + 1"
+        file=${file:pos:longueur}
+    fi
+    pos=`find_chaine $file .`
+    let "pos = $pos + 1"
+    let "longueur = ${#file} - pos"
+    extension=${file:$pos:$longueur}
+    let "longueur = ${#file} - ${#extension} - 1"
+    file=${file:0:$longueur}
+    pos=`find_chaine $file /`
+    folder=${file:0:pos}
+    let "pos = $pos + 1"
+    let "longueur = ${#file} - $pos"
+    file=${file:$pos:$longueur}
+    nom=$file
+    gedit ${folder}/${nom}.${extension} &
+    if [ $extension == "h" ]
+    then
+        folder="src"
+        extension="cpp"
+        gedit ${folder}/${nom}.${extension} &
+    else
+        folder="include"
+        extension="h"
+        gedit ${folder}/${nom}.${extension} &
+    fi
+
+fi

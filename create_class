@@ -1,0 +1,241 @@
+#!/bin/bash
+
+# Trouve une sous-chaine dans une chaine: find $chaine $sous_chaine
+function find_chaine
+{
+    chaine=$1
+    sous_chaine=$2
+    n1=${#chaine}
+    n2=${#sous_chaine}
+    let "n_fin = $n1 - $n2"
+    let "null_pos = -1"
+    let "position = $null_pos"
+    for i in `seq 0 $n_fin`
+    do
+        if [ $position -eq $null_pos ] && [ ${chaine:$i:$n2} == ${sous_chaine:0:$n2} ]
+        then
+            let "position = $i"
+        fi
+    done
+    echo $position
+}
+
+# Ecrase une partie d'une chaine: erase $chaine $debut $longueur
+function erase
+{
+    chaine=$1
+    debut=$2
+    longueur=$3
+    let "debut2 = $debut + $longueur"
+    let "longueur2 = ${#chaine} - $debut - $longueur"
+    chaine_new_1=${chaine:0:$debut}
+    chaine_new_2=${chaine:$debut2:$longueur2}
+    chaine_new="$chaine_new_1$chaine_new_2"
+    
+    echo $chaine_new
+}
+
+function clear_namespace
+{
+    type_variable=$1
+    shift
+    namespac=('')
+    let "n_namespaces = $#"
+    let "i = 0"
+    for i in `seq 1 $n_namespaces`
+    do 
+        namespac[$i]=$1
+        shift
+    done
+    for i in `seq 1 $n_namespaces`
+    do 
+        pos=`find_chaine $type_variable ${namespac[$i]}`
+        let "len_namespace = ${#namespac[$i]} + 2"
+        let "null_pos = -1"
+        while [ $pos -ne $null_pos ]
+        do 
+            type_variable=`erase $type_variable $pos $len_namespace`
+            pos=`find_chaine $type_variable ${namespac[$i]}`
+        done
+    done
+    
+    echo $type_variable
+}
+
+if [ $# -lt 1 ]
+then
+    echo "This program needs one parameter, the name of the class to construct!"
+else
+    nom_classe=$1
+    nom_classe_maj=${nom_classe^^}
+        
+    ### Définition des attributs de la classe
+    type=('')
+    variable=('')
+    let "i = 0"
+    echo "Entrez les attributs de classe (ENTER pour stopper):"
+    read -p "Type puis le nom de la variable à ajouter: " type[$i] variable[$i]
+    while [ "${type[$i]}" != "" ] && [ "${variable[$i]}" != "" ]
+    do
+        let "i = i + 1"
+        read -p "Type puis le nom de la variable à ajouter: " type[$i] variable[$i]
+    done
+    
+    chaine_attributs=""
+    for j in `seq 1 $i`
+    do
+        let "k = j-1"
+        chaine_attributs="$chaine_attributs ${type[$k]} ${variable[$k]};
+   "
+    done
+    
+    ### Définition des includes
+    includes=('')
+    let "i = 0"
+    echo "Entrez les includes (ENTER pour stopper):"
+    read -p "#include: " includes[$i]
+    while [ "${includes[$i]}" != "" ]
+    do
+        let "i = i + 1"
+        read -p "#include: " includes[$i]
+    done
+    
+    chaine_includes=""
+    for j in `seq 1 $i`
+    do
+        let "k = j-1"
+        foo=`find_chaine ${includes[$k]} .h`
+        if [ $foo -ge 0 ]
+        then
+            chaine_includes="$chaine_includes#include \"${includes[$k]}\"
+"
+        else
+            chaine_includes="$chaine_includes#include <${includes[$k]}>
+"
+        fi
+    done
+    
+    ### Définition des namespace du .cpp
+    namespace=('')
+    let "i = 0"
+    echo "Entrez les namespace (ENTER pour stopper):"
+    read -p "using namespace: " namespace[$i]
+    while [ "${namespace[$i]}" != "" ]
+    do
+        let "i = i + 1"
+        read -p "using namespace: " namespace[$i]
+    done
+    
+    chaine_namespace=""
+    for j in `seq 1 $i`
+    do
+        let "k = j-1"
+        chaine_namespace="${chaine_namespace}using namespace ${namespace[$k]};
+"
+    done
+    
+    let "n_var = ${#variable[*]} - 2"
+    fonctions_get=""
+    fonctions_set=""
+    for i in `seq 0 $n_var`
+    do 
+        string_namespace=`echo ${namespace[*]}`
+        let "lenVar = ${#variable[$i]}-1"
+        part1=${variable[$i]:0:1}
+        part2=${variable[$i]:1:$lenVar}
+        maj_variable="${part1^^}$part2"
+        fonctions_get="${fonctions_get}${type[$i]} get$maj_variable() const;
+    "
+        fonctions_set="${fonctions_set}void set$maj_variable(${type[$i]} user_${variable[$i]});
+    "
+    done
+    ## Ecriture dans le .h
+    echo "#ifndef `echo $nom_classe_maj`_H_INCLUDED
+#define `echo $nom_classe_maj`_H_INCLUDED
+#include <iostream>
+$chaine_includes
+class $nom_classe{
+
+    private:
+    
+   $chaine_attributs
+    public:
+    
+    $nom_classe();
+    $nom_classe(const $nom_classe& user_object);
+    ~$nom_classe(){};
+    
+    $fonctions_get
+    $fonctions_set    
+    $nom_classe& operator=(const $nom_classe& user_object);
+    friend std::ostream& operator<<(std::ostream& f, const $nom_classe& user_object);
+};
+        
+#endif" > code.cpp
+
+    ## Ecriture dans le .cpp
+    
+    constructeur_par_copie=""
+    operateur_flux="f<<\"{\"<<endl"
+    for i in `seq 0 $n_var`
+    do 
+        constructeur_par_copie="${constructeur_par_copie}${variable[$i]} = user_object.${variable[$i]};
+    "
+        operateur_flux="${operateur_flux}<<\"${variable[$i]} = \"<<user_object.${variable[$i]}<<endl"
+    done
+    operateur_flux="${operateur_flux}<<\"}\"<<endl;"
+    operateur_egalite="$constructeur_par_copie
+    return *this;"
+    let "foo = ${#constructeur_par_copie} - 4"
+    constructeur_par_copie=${constructeur_par_copie:0:$foo}
+    
+    
+    
+    fonctions_get=""
+    fonctions_set=""
+    for i in `seq 0 $n_var`
+    do 
+        string_namespace=`echo ${namespace[*]}`
+        type[$i]=`clear_namespace ${type[$i]} $string_namespace`
+        let "lenVar = ${#variable[$i]}-1"
+        part1=${variable[$i]:0:1}
+        part2=${variable[$i]:1:$lenVar}
+        maj_variable="${part1^^}$part2"
+        fonctions_get="${fonctions_get}${type[$i]} $nom_classe::get$maj_variable() const { return ${variable[$i]};}
+"
+        fonctions_set="${fonctions_set}void $nom_classe::set$maj_variable(${type[$i]} user_${variable[$i]})
+{
+    ${variable[$i]} = user_${variable[$i]};
+}
+"
+    done
+    
+    echo "
+        
+#include \"$nom_classe.h\" 
+$chaine_namespace
+$nom_classe::$nom_classe()
+{
+
+}
+
+$nom_classe::$nom_classe(const $nom_classe& user_object)
+{
+    $constructeur_par_copie}
+    
+$fonctions_get
+$fonctions_set
+$nom_classe& $nom_classe::operator=(const $nom_classe& user_object)
+{
+    *this = $nom_classe(user_object);
+
+    return *this;
+}
+
+ostream& operator<<(ostream& f, const $nom_classe& user_object)
+{
+    $operateur_flux
+    return f;
+}
+" >> code.cpp
+fi
