@@ -5,6 +5,8 @@
 #include "bouncer.h"
 #include <string>
 
+int convertDir(int dir);
+
 class Character{
 
     protected:
@@ -23,17 +25,20 @@ class Character{
     int nextMoveDirection;
     bool moving;
     float velocity;
+    int displayMode;
+    float elapsedDisplayTime;
+    float timeStepDisplay;
     
     sf::Vector2i sizeSprite;
     sf::Vector2i size;
     sf::Texture texture;
     sf::Sprite sprite;
-    sf::IntRect textureRect;
     
     //// Protected functions
     
     void setSpritePosition();
     virtual void updateGrid(float elapsedTime);
+    void updateTextureRect(float elapsedTime=0);
     void update(float elapsedTime);
    
     public:
@@ -61,7 +66,6 @@ class Character{
     sf::Vector2i getSize() const;
     const sf::Texture& getTexture() const;
     sf::Sprite getSprite() const;
-    sf::IntRect getTextureRect() const;
     
     void setTarget(sf::RenderTarget* user_target);
     void setName(std::string user_name);
@@ -73,6 +77,7 @@ class Character{
     void setNextMoveDirection(int user_nextMoveDirection);
     void setMoving(bool user_moving);
     void setVelocity(float user_velocity);
+    void setDisplayMode(int user_displayMode);
     void setSizeSprite(sf::Vector2i user_sizeSprite);
     void setSize(sf::Vector2i user_size);
     

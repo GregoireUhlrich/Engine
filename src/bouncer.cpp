@@ -147,6 +147,14 @@ bool Bouncer::ask(sf::Vector2f position, sf::Vector2i sizeSprite, int direction)
     }
     return 1;
 }
+bool Bouncer::ask(sf::Vector2i position)
+{
+    if (position.x >= sizeMap.x or position.y >= sizeMap.y) return true;
+    for (int i=0; i<4; i++)
+        if (!passOrNot[position.x][position.y][i])
+            return false;
+    return true;
+}
 
 Bouncer& Bouncer::operator=(const Bouncer& user_object)
 {

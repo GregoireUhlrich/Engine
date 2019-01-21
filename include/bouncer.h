@@ -1,6 +1,7 @@
 #ifndef BOUNCER_H_INCLUDED
 #define BOUNCER_H_INCLUDED
 #include <SFML/Graphics.hpp>
+#include <cmath>
 #include <iostream>
 #include <vector>
 
@@ -30,6 +31,7 @@ class Bouncer{
     
     void addException(sf::Vector2i position, int direction);
     bool ask(sf::Vector2f position, sf::Vector2i sizeSprite ,int direction);
+    bool ask(sf::Vector2i position);
         
     Bouncer& operator=(const Bouncer& user_object);
     friend std::ostream& operator<<(std::ostream& f, const Bouncer& user_object);

@@ -36,9 +36,8 @@ PNG_Encoder::PNG_Encoder()
     events = vector<string>(0);
 }
 
-PNG_Encoder::PNG_Encoder(string user_fileMap)
+PNG_Encoder::PNG_Encoder(string user_fileMap): PNG_Encoder()
 {
-    PNG_Encoder();
     fileMap = user_fileMap;
 }
 
@@ -48,6 +47,7 @@ PNG_Encoder::PNG_Encoder(const PNG_Encoder& user_object)
 }
 
 string PNG_Encoder::getFileMap() const { return fileMap;}
+vector<string> PNG_Encoder::getFileTextures() const { return fileTexture;}
 sf::Vector2i PNG_Encoder::getSizeSprite() const { return sizeSprite;}
 sf::Vector2i PNG_Encoder::getSizeMap() const { return sizeMap;}
 Bouncer PNG_Encoder::getBouncer() const { return bouncer;}

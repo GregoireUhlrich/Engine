@@ -49,6 +49,7 @@ class PNG_Encoder{
     ~PNG_Encoder(){};
     
     std::string getFileMap() const;
+    std::vector<std::string > getFileTextures() const;
     sf::Vector2i getSizeSprite() const;
     sf::Vector2i getSizeMap() const;
     Bouncer getBouncer() const;

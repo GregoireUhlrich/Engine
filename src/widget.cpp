@@ -3,7 +3,7 @@ using namespace std;
 
 Widget::Widget()
 {
-    target = 0;
+    target = nullptr;
     enabled = 1;
     position = sf::Vector2f(0,0);
     sprite.setPosition(position);
@@ -35,7 +35,14 @@ sf::Vector2f Widget::getPosition() const { return position;}
 sf::Vector2f Widget::getSize() const { return size;}
 sf::Vector2i Widget::getPosMouse() const { return posMouse;}
 sf::Vector2i Widget::getPosClick() const { return posClick;}
-bool Widget::getIsMouseHere() const { return isMouseHere;}
+bool Widget::getIsMouseHere() const 
+{
+    if (isMouseHere) return true;
+    for (int i=0; i<nAttachedWidget; i++)
+        if (attachedWidget[i]->getIsMouseHere())
+            return true;
+    return false;
+}
 bool Widget::getIsMousePressed() const { return isMousePressed;}
 bool Widget::getEnabled() const { return enabled;}
 int Widget::getDeltaMouseWheel() const { return deltaMouseWheel;}
@@ -53,6 +60,7 @@ void Widget::setSize(sf::Vector2f user_size)
     if (user_size.x > 0 and user_size.y > 0)
     {
         size = user_size;
+        this->updateButton();
     }
     else cout<<"Invalid size in \"Widget::setSize\": must be greater than 0.\n";
 }
@@ -64,10 +72,12 @@ void Widget::setEnabled(bool user_enabled)
 void Widget::testMouse(sf::Vector2i user_posMouse)
 {
     posMouse = user_posMouse;
-    if (posMouse.x > position.x and posMouse.x < position.x+size.x and posMouse.y > position.y and posMouse.y < position.y+size.y)
+    if (posMouse.x >= position.x and posMouse.x < position.x+size.x and posMouse.y >= position.y and posMouse.y < position.y+size.y)
         isMouseHere = 1;
     else
         isMouseHere = 0;
+    for (int i=0; i<nAttachedWidget; i++)
+        attachedWidget[i]->testMouse(posMouse);
 }
 
 void Widget::testEvent(sf::Event event)
@@ -90,14 +100,25 @@ void Widget::testEvent(sf::Event event)
         {
             mouseReleased();
         }
+        else if (event.type == sf::Event::MouseWheelMoved)
+        {
+            mouseWheel(event.mouseWheel.delta);
+        }
+        else if (event.type == sf::Event::Resized)
+        {
+            windowResized();
+        }
+        for (int i=0; i<nAttachedWidget; i++)
+            attachedWidget[i]->testEvent(event);
     }
 }
 
 void Widget::mousePressed()
 {
-    if (isMouseHere)
+    if (isMouseHere and !isMousePressed)
     {
         isMousePressed = 1;
+        posClick = posMouse;
     }
 }
 
@@ -176,7 +197,7 @@ Widget& Widget::operator=(const Widget& user_object)
 
 Text::Text(): sf::Text()
 {
-    font.loadFromFile(ubuntuFont);
+    setCharacterSize(20);
 }
 
 Text::Text(string user_string): sf::Text()

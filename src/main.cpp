@@ -3,6 +3,7 @@
 #include "map.h"
 #include "button.h"
 #include "wrapMenu.h"
+#include "interactive.h"
 #include <cstdlib>
 using namespace std;
 
@@ -23,68 +24,29 @@ void action(int dir)
 int main()
 {
     srand(time(0));
-    
-    sf::RenderWindow window(sf::VideoMode(800,800), "Test engine");
-    sf::View view(sf::FloatRect(0,0,32*20,32*20));
+    //sf::ContextSettings settings;
+    //settings.antialiasingLevel = 8;
+    int xWindow = min(1600,(int)round(8/10.*sf::VideoMode::getDesktopMode().width));
+    int yWindow = xWindow*9/16;
+
+    sf::RenderWindow window(sf::VideoMode(xWindow, yWindow), "SFML shapes", sf::Style::Default);
+    //window.setVerticalSyncEnabled(true);
+    sf::View view = window.getView();
+    sf::Vector2u size = window.getSize();
     //window.setView(view);
     Player lolita("lolita",&window);
-    lolita.loadFromFile("vieille1.png");
+    lolita.loadFromFile("AC_002.png");
+    lolita.setDisplayMode(2);
     lolita.setSize(sf::Vector2i(32,48));
     //lolita.setGrid(false);
     lolita.setPosition(sf::Vector2f(2*32,10*32));
     
-    Character fantome("fantome",&window);
-    fantome.loadFromFile("fantome1.png");
-    fantome.setSize(sf::Vector2i(32,48));
-    fantome.setPosition(sf::Vector2f(10.5*32,10*32));
     
-    Map map(&window,"level1_save.png");
+    IMap map(&window,"level1_save.png");
     //map.loadTxt("level1.txt");
     map.load();
-    
-    PropButton properties;
-    properties.mode = 2;
-    properties.fileTextureIcon = vector<string>(2);
-    properties.outlineColor = vector<sf::Color>(2);
-    properties.fillColor = vector<sf::Color>(2);
-    properties.outlineThickness = vector<int>(2);
-    properties.fileTextureIcon[0] = "restart-grey.png";
-    properties.fileTextureIcon[1] = "restart-yellow.png";
-    properties.outlineThickness[0] = 1;
-    properties.outlineThickness[1] = 1;
-    properties.outlineColor[0] = sf::Color(110,110,110);
-    properties.outlineColor[1] = sf::Color(84,106,139);
-    properties.fillColor[0] = sf::Color::White;
-    properties.fillColor[1] = sf::Color::White;
-    PushButton button(&window, properties);
-    button.setPosition(sf::Vector2f(100,100));
-    
-    properties.fileTextureIcon[0] = "add-grey.png";
-    properties.fileTextureIcon[1] = "add-green.png";
-    PressButton button2(&window, properties);
-    button2.setPosition(sf::Vector2f(150,100));
-    
-    Button button4(&window, properties);
-    button4.setPosition(sf::Vector2f(150,150));
-    
-    properties.fillColor[0] = sf::Color::White;
-    properties.fillColor[1] = sf::Color::Green;
-    properties.textColor = vector<sf::Color>(2);
-    properties.textColor[0] = sf::Color::Green;
-    properties.textColor[1] = sf::Color::White;
-    PushButton button3(&window,properties);
-    button3.setText("Enable/Disable the buttons to the left");
-    button3.setIcon(false);
-    button3.setPosition(sf::Vector2f(200,100));
-    WrapMenu wrap(&window);
-    wrap.setText("wrap test");
-    cout<<"wrap created\n";
-    wrap.addChoice("Choice 1");
-    wrap.addChoice("Choice 2");
-    wrap.addChoice("Choice 3");
-    wrap.addChoice("Choice 4");
-    wrap.addChoice("Choice 5");
-    wrap.addChoice("Choice 6");
+
+    Interactive Int(&window, &map);
     map.addException(sf::Vector2i(0,0),0);
     map.addException(sf::Vector2i(1,1),0);
     map.addException(sf::Vector2i(1,1),1);
@@ -92,56 +54,102 @@ int main()
     map.addException(sf::Vector2i(1,1),3);
     map.addException(sf::Vector2i(2,3),3);
     lolita.setBouncer(map.getBouncer());
-    fantome.setBouncer(map.getBouncer());
     sf::Clock clock;
+    sf::Clock clock2;
+    clock2.restart();
+    sf::Time time2;
     sf::Time elapsedTime = clock.restart();
-    sf::Vector2i posMouse;
-    sf::Event event;
+    sf::Vector2i posMouse(0,0);
+    sf::Event event; 
+        
+
+    int label = 0;
+    bool printTime = false;
     while (window.isOpen())
     {
         posMouse = sf::Mouse::getPosition(window);
-        button.testMouse(posMouse);
-        button2.testMouse(posMouse);
-        button3.testMouse(posMouse);
-        button4.testMouse(posMouse);
-        wrap.testMouse(posMouse);
+        label = 0;
+        time2 = clock2.restart();
+        if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
+        label++;
+        Int.testMouse(posMouse);
+        time2 = clock2.restart();
+
+        if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
+        label++;
+        map.testMouse(posMouse);
+        time2 = clock2.restart();
+
+        if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
+        label++;
+        map.setIsMouseHere(not Int.getIsMouseHere());
+        time2 = clock2.restart();
+
+
+        if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
+        label++;
         while (window.pollEvent(event) and window.isOpen())
         {
-            button.testEvent(event);
-            button2.testEvent(event);
-            button3.testEvent(event);
-            button4.testEvent(event);
-            wrap.testEvent(event);
+            Int.testEvent(event);
+            map.testEvent(event);
             lolita.testEvent(event);
             if (event.type == sf::Event::Closed)
             {
                 window.close();
             }
         }
+        time2 = clock2.restart();
+
+        if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
+        label++;
+        if (size != window.getSize())
+        {
+            size = window.getSize();
+            window.setView(sf::View(sf::FloatRect(0,0,size.x,size.y)));
+        }
+        time2 = clock2.restart();
+
+        if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
+        label++;
+
         elapsedTime = clock.restart();
         window.clear();
+        time2 = clock2.restart();
+
+        if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
+        label++;
         map.draw(elapsedTime.asSeconds());
-        if (button.getSignal()) lolita.setPosition(sf::Vector2f(2*32,10*32));
+        time2 = clock2.restart();
+
+        if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
+        label++;
         lolita.draw(elapsedTime.asSeconds());
-        if (button2.getSignal()) fantome.draw(elapsedTime.asSeconds());
-        if (button3.getSignal()) { button.setEnabled(!button.getEnabled()); button2.setEnabled(!button2.getEnabled());}
-        if (fantome.getGrid()) fantome.setNextMoveDirection(alea(0,3));
-        else fantome.setMoveDirection(alea(0,3));
-        //cout<<lolita<<endl;
-        button.draw(elapsedTime.asSeconds());
-        button2.draw(elapsedTime.asSeconds());
-        button3.draw(elapsedTime.asSeconds());
-        button4.draw(elapsedTime.asSeconds());
-        wrap.draw(elapsedTime.asSeconds());
-        string choice = wrap.getChoice();
-        if (choice != "")
-        {
-            cout<<"Wrap says: "<<choice<<endl;
-            choice = "";
-        }
+        time2 = clock2.restart();
+
+        if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
+        label++;
+        Int.draw(elapsedTime.asSeconds());
+        time2 = clock2.restart();
+
+
+        if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
+        label++;
         window.display();
+        time2 = clock2.restart();
+
+        if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
+        label++;
+
+        string foo = Int.getChoice();
+        if (foo != "")
+        {
+            if (foo == "Quit") window.close();
+        }
+        time2 = clock2.restart();
+
+        if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
+        label++;
     }
-    map.setFileMap("level1_save.png");
-    map.save();
+ 
     return 0;
-}
+   }

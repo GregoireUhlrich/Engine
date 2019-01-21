@@ -3,6 +3,10 @@
 
 #include <string>
 
-static std::string ubuntuFont = "../Engine/Plagiat-mon/Fonts/ubuntu-font-family/Ubuntu-L.ttf";
+static std::string ubuntuFont = "Fonts/ubuntu-font-family/Ubuntu-L.ttf";
+static std::string iconDirectory = "Icons/";
+static std::string tilesetDirectory = "Tileset/";
+static std::string mapDirectory = "Maps/";
+enum StateMap {ADD, MOVE, ERASE, SELECT};
 
 #endif
