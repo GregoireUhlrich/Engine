@@ -79,6 +79,14 @@ class IMap: public Map{
 
     bool pass;
 
+    bool isGhostSprite;
+    sf::RenderTexture ghostTexture;
+    std::string ghostFileTexture;
+    sf::Vector2i ghostPosition;
+
+    bool select, select2;
+    sf::RectangleShape selectRect;
+
     public:
 
     IMap();
@@ -96,6 +104,7 @@ class IMap: public Map{
     void setPrio(int user_prio);
     void setGrid(bool user_grid);
     void setPass(bool user_pass);
+    void setGhost(std::string texture, sf::Vector2i nSpriteToPull, sf::Vector2i posSpriteToPull);
 
     void testEvent(sf::Event event);
     void mousePressed();

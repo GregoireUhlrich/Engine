@@ -59,6 +59,7 @@ void Map::updateSprite()
             sf::View fooView(sf::FloatRect(0,0,sizeMap.x*sizeSprite.x,sizeMap.y*sizeSprite.y));
             textureMap[i].setView(fooView);
             textureMap[i].display();
+            spriteMap[i] = sf::Sprite();
             spriteMap[i].setTexture(textureMap[i].getTexture());
         }
     }
@@ -109,6 +110,17 @@ IMap::IMap(): Map()
     gridX = vector<sf::RectangleShape>(0);
     gridY = vector<sf::RectangleShape>(0);
     pass = 0;
+
+    isGhostSprite = false;
+    ghostPosition = sf::Vector2i(0,0);
+    ghostFileTexture = "";
+
+    select = false;
+    select2 = false;
+    selectRect.setFillColor(sf::Color::Transparent);
+    selectRect.setOutlineColor(sf::Color(84,106,139));
+    selectRect.setOutlineThickness(3.);
+    
 }
 
 IMap::IMap(sf::RenderTarget* user_target): IMap()
@@ -145,6 +157,18 @@ void IMap::setPrio(int user_prio) { prio = user_prio;}
 void IMap::setGrid(bool user_grid) { grid = user_grid;}
 void IMap::setPass(bool user_pass) { pass = user_pass;}
 
+void IMap::setGhost(string fileTexture, sf::Vector2i nSpriteToPull, sf::Vector2i posSpriteToPull)
+{
+    int indexTexture = addTexture(fileTexture);
+    ghostTexture.create(nSpriteToPull.x*sizeSprite.x,nSpriteToPull.y*sizeSprite.y);
+    sf::Sprite sprite;
+    sprite.setTexture(texture[indexTexture]);
+    sprite.setTextureRect(sf::IntRect(posSpriteToPull.x,posSpriteToPull.y,nSpriteToPull.x*sizeSprite.x,nSpriteToPull.y*sizeSprite.y));
+    ghostTexture.draw(sprite);
+    ghostTexture.display();
+    isGhostSprite = true;
+}
+
 void IMap::testEvent(sf::Event event)
 {
     if (event.type == sf::Event::MouseButtonPressed)
@@ -171,6 +195,14 @@ void IMap::mousePressed()
     {
         isMousePressed = 1;
         posClick = posMouse;
+        if (state == ADD and isGhostSprite)
+        {
+            sf::Vector2f foo = bigRenderTexture.mapPixelToCoords(posMouse);
+            sf::Vector2u fooSize = ghostTexture.getSize();
+            foo.x = round((foo.x-fooSize.x)/sizeSprite.x)*sizeSprite.x;
+            foo.y = round((foo.y-fooSize.y)/sizeSprite.y)*sizeSprite.y;
+            posClick = bigRenderTexture.mapCoordsToPixel(foo);
+        }
     }
 }
 void IMap::mouseReleased()
@@ -196,6 +228,7 @@ void IMap::updateSprite()
     if (bigRenderTexture.getSize() != target->getSize())
         windowResized();
 
+    sf::Vector2f effectivePosMouse = bigRenderTexture.mapPixelToCoords(posMouse);
     outline.setSize(sf::Vector2f(sizeSprite.x*sizeMap.x,sizeSprite.y*sizeMap.y));
     if (grid)
     {
@@ -224,7 +257,8 @@ void IMap::updateSprite()
     {
         if (delta != 0)
         {
-            sf::Vector2f effectivePosMouse = bigRenderTexture.mapPixelToCoords(posMouse);
+            sf::Vector2f fooMouse = bigRenderTexture.mapPixelToCoords(posMouse);
+            sf::Vector2f fooClick = bigRenderTexture.mapPixelToCoords(posClick);
             sf::Vector2u size = target->getSize();
             sf::Vector2f center = view.getCenter();
             sf::Vector2f fooSize = view.getSize();
@@ -242,8 +276,12 @@ void IMap::updateSprite()
             fooSize.y *= ratioZoom;
             view.setCenter(center);
             view.setSize(fooSize);
+            bigRenderTexture.setView(view);
             
             delta = 0;
+
+            posMouse = bigRenderTexture.mapCoordsToPixel(fooMouse);
+            posClick = bigRenderTexture.mapCoordsToPixel(fooClick);
         }
 
         if (isMousePressed)
@@ -261,6 +299,69 @@ void IMap::updateSprite()
                 posClick = posMouse;
             }
         }
+    }
+    if (isMousePressed && (state == ADD || state == SELECT))
+    {
+        if (!select || (select && select2)) 
+        {
+            select = 1;
+            select2 = 0;
+            /*if (state == adding)
+            {
+                sf::Vector2f foo2 = viewMap.getSize();
+                sf::Vector2u foo;
+                if (isImLeft)
+                    foo = imL->getNSprites();
+                if (foo.x != 0)
+                {
+                    posClick = invConvertPos(spriteToAdd.getPosition())+sf::Vector2i(1,1);
+                }
+                else if (ghostSpriteCtrlC)
+                {
+                    int foo;
+                    if (prioCtrlC == 4) foo = 0;
+                    else foo = prioCtrlC;
+                    posClick = invConvertPos(spriteCtrlCVec[foo][0][0].getPosition())+sf::Vector2i(1,1);
+                }
+            }*/
+        }
+        if (select)
+        {
+            sf::Vector2f clickEff = bigRenderTexture.mapPixelToCoords(posClick);
+            //clickEff.x = floor(clickEff.x/sizeSprite.x)*sizeSprite.x;
+            //clickEff.y = floor(clickEff.y/sizeSprite.y)*sizeSprite.y;
+            effectivePosMouse.x = round(effectivePosMouse.x/sizeSprite.x)*sizeSprite.x;
+            effectivePosMouse.y = round(effectivePosMouse.y/sizeSprite.y)*sizeSprite.y;
+            int xmin = min(clickEff.x, effectivePosMouse.x);
+            int xmax = max(clickEff.x, effectivePosMouse.x);
+            int ymin = min(clickEff.y, effectivePosMouse.y);
+            int ymax = max(clickEff.y, effectivePosMouse.y);
+            xmin = max(xmin, 0);
+            xmax = min(xmax, sizeMap.x*sizeSprite.x);
+            ymin = max(ymin, 0);
+            ymax = min(ymax, sizeMap.y*sizeSprite.y);
+    
+            selectRect.setPosition(xmin, ymin);
+            selectRect.setSize(sf::Vector2f(xmax-xmin, ymax-ymin));
+        }
+    }
+    else if (select)
+    {
+        select2 = 1;
+        sf::Vector2f foo;
+        sf::Vector2f foo2;
+        foo = selectRect.getPosition();
+        foo2 = selectRect.getSize();
+        float xmin = round(foo.x/sizeSprite.x)*sizeSprite.x;
+        float ymin = round(foo.y/sizeSprite.y)*sizeSprite.y;
+        float xmax = max(xmin+sizeSprite.x,(float)round((foo.x+foo2.x)/sizeSprite.x)*sizeSprite.x);
+        float ymax = max(ymin+sizeSprite.y,(float)round((foo.y+foo2.y)/sizeSprite.y)*sizeSprite.y);
+        if (xmin < 0) xmin = 0;
+        if (xmax > sizeMap.x*sizeSprite.x)  xmax = sizeMap.x*sizeSprite.x;
+        if (ymin < 0) ymin = 0;
+        if (ymax > sizeMap.y*sizeSprite.y)  ymax = sizeMap.y*sizeSprite.y;
+        selectRect.setPosition(xmin,ymin);
+        selectRect.setSize(sf::Vector2f(xmax-xmin, ymax-ymin));
     }
 }
 
@@ -301,6 +402,33 @@ void IMap::draw(float elapsedTime)
             }
         }
     }
+    if (isGhostSprite and state == ADD)
+    {
+        sf::Sprite ghostSprite;
+        sf::Texture fooTexture = ghostTexture.getTexture();
+        sf::Vector2u foo = ghostTexture.getSize();
+        if (select)
+        {
+            fooTexture.setRepeated(true);
+            ghostSprite.setTexture(fooTexture);
+            sf::Vector2f fooSize = selectRect.getSize();
+            sf::Vector2f fooPos = selectRect.getPosition();
+            ghostSprite.setPosition(fooPos);
+            ghostSprite.setTextureRect(sf::IntRect(0,0,fooSize.x,fooSize.y));
+        }
+        else
+        {
+            ghostSprite.setTexture(fooTexture);
+            sf::Vector2f effectivePosMouse = bigRenderTexture.mapPixelToCoords(posMouse);
+            effectivePosMouse.y = round(effectivePosMouse.y/sizeSprite.y)*sizeSprite.y;
+            effectivePosMouse.x = round(effectivePosMouse.x/sizeSprite.x)*sizeSprite.x;
+            ghostSprite.setPosition(effectivePosMouse.x-foo.x,effectivePosMouse.y-foo.y);
+        }
+        ghostSprite.setColor(sf::Color(255,255,255,123));
+        bigRenderTexture.draw(ghostSprite);
+    }
+    if (select and (state == ADD or state == SELECT))
+        bigRenderTexture.draw(selectRect);
 
     bigRenderTexture.draw(outline);
     bigRenderTexture.display();

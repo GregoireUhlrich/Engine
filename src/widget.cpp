@@ -125,6 +125,7 @@ void Widget::mousePressed()
 void Widget::mouseReleased()
 {
     isMousePressed = 0;
+    isMouseHere = 0;
 }
 
 void Widget::mouseWheel(int user_deltaMouseWheel)

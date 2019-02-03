@@ -48,6 +48,7 @@ class Button: public Widget{
     Text getText() const;
     virtual bool getSignal();
     virtual std::string getChoice() { return getText().getString().toAnsiString();}
+    virtual std::string getCurrentChoice() const{ return getText().getString().toAnsiString();}
     
     void setPosition(sf::Vector2f user_position);
     void setSize(sf::Vector2f user_size);

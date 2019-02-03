@@ -37,6 +37,7 @@ class WrapMenu: public Button{
     void deleteChoice(std::string choice);
     void testMouse(sf::Vector2i user_posMouse);
     virtual std::string getChoice();
+    std::string getCurrentChoice() const;
     void setDetached(bool user_detached);
     void setDetachedPosition(sf::Vector2f setDetachedPosition);
     void setDetachedTarget(sf::RenderTarget* user_target);

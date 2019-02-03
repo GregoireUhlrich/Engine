@@ -91,6 +91,20 @@ string WrapMenu::getChoice()
     return "";
 } 
 
+string WrapMenu::getCurrentChoice() const
+{
+    string foo = "";
+    for (int i=0; i<nAttachedWidget; i++)
+    {
+        if (attachedWidget[i]->getIsMouseHere())
+        {
+            foo = attachedWidget[i]->getCurrentChoice();
+            return getText().getString().toAnsiString()+": "+foo;
+        }
+    }
+    return "";
+}
+
 void WrapMenu::setDetached(bool user_detached)
 {
     detached = user_detached;
@@ -109,16 +123,16 @@ void WrapMenu::testMouse(sf::Vector2i user_posMouse)
     posMouse = user_posMouse;
     bool fooBool = isMouseHere;
     bool isMouseOnWidget = 0;
+    sf::Vector2i effPosMouse = posMouse;
+    effPosMouse.x -= attachedSprite.getPosition().x;
+    effPosMouse.y -= attachedSprite.getPosition().y-yMenu;
+    if (detached)
+    {
+        effPosMouse.x += detachedPosition.x+position.x;
+        effPosMouse.y += detachedPosition.y+position.y-size.y;
+    }
     if (isMouseHere)
     {
-        sf::Vector2i effPosMouse = posMouse;
-        effPosMouse.x -= attachedSprite.getPosition().x;
-        effPosMouse.y -= attachedSprite.getPosition().y-yMenu;
-        if (detached)
-        {
-            effPosMouse.x -= detachedPosition.x+position.x;
-            effPosMouse.y -= detachedPosition.y+position.y;
-        }
         for (int i=0; i<nAttachedWidget; i++)
         {
             attachedWidget[i]->testMouse(effPosMouse);
@@ -143,19 +157,24 @@ void WrapMenu::testMouse(sf::Vector2i user_posMouse)
 
 void WrapMenu::mouseReleased()
 {
-    string foo = "";
-    for (int i=0; i<nAttachedWidget; i++)
+    if (isMousePressed)
     {
-        if (isMouseHere and attachedWidget[i]->getIsMouseHere())
+        string foo = "";
+        for (int i=0; i<nAttachedWidget; i++)
         {
-            attachedWidget[i]->mouseReleased();
-            foo = attachedWidget[i]->getChoice();
-            choice = getText().getString().toAnsiString()+": "+foo;
+            if (isMouseHere and attachedWidget[i]->getIsMouseHere())
+            {
+                attachedWidget[i]->mouseReleased();
+                foo = attachedWidget[i]->getChoice();
+                choice = getText().getString().toAnsiString()+": "+foo;
+            }
+            else attachedWidget[i]->mouseReleased();
         }
-        else attachedWidget[i]->mouseReleased();
+        isMouseHere = 0;
+        isMousePressed = 0;
+        iMode = 0;
+        updateButton();
     }
-    isMouseHere = 0;
-    isMousePressed = 0;
 }
 
 void WrapMenu::addChoice(string newChoice, int type)

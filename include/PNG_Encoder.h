@@ -2,6 +2,7 @@
 #define PNG_ENCODER_H_INCLUDED
 #include <SFML/Graphics.hpp>
 #include "bouncer.h"
+#include "global.h"
 #include <iostream>
 #include <fstream>
 #include <cmath>

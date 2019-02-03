@@ -32,6 +32,7 @@ Interactive::Interactive(sf::RenderTarget* w, IMap* user_map): Interactive()
     indices.grid = 5;
     indices.pass = 6;
     indices.game = 7;
+    indices.tileset = 8;
 
     attachedWidget.push_back(new WrapMenu(target));
     int x0 = 10;
@@ -307,7 +308,13 @@ void Interactive::testMouse(sf::Vector2i user_posMouse)
     if (!wrapDeployed)
     {
         for (int i=2; i<nAttachedWidget; i++)
+        {
             attachedWidget[i]->testMouse(posMouse);
+            if (attachedWidget[i]->getIsMouseHere())
+            {
+                break;
+            }
+        }
     }
 }
 
@@ -324,10 +331,53 @@ void Interactive::testEvent(sf::Event event)
     map->setPrio(attachedWidget[indices.prio]->getChoiceSet());
     map->setGrid(attachedWidget[indices.grid]->getSignal());
     map->setPass(attachedWidget[indices.pass]->getSignal());
-    string foo = attachedWidget[0]->getChoice();
+    string foo = attachedWidget[indices.file]->getChoice();
     if (foo != "")
     {
         if (foo == "File: Quit") choice = "Quit";
+        else if (foo[6]=='L' and foo[7]=='o')
+        {
+            foo.erase(foo.begin(), foo.begin()+16);
+            cout<<"Loading "<<foo<<endl;
+            map->setFileMap(mapDirectory+foo);
+            map->load();
+        }
+        else if (foo == "File: Save Map")
+        {
+            cout<<"Saving map.\n";
+            map->save();
+            sf::Vector2f posWidget = attachedWidget[0]->getPosition();
+            delete attachedWidget[0];
+            attachedWidget[0] = new WrapMenu(target);
+            attachedWidget[0]->setPosition(posWidget);
+            attachedWidget[0]->setText("File");
+            attachedWidget[0]->addChoice("New Map");
+            Widget* loadMenu = new WrapMenuSide(target);
+            loadMenu->setText("Load Map");
+            DIR * rep = opendir(mapDirectory.c_str()); 
+            if (rep != NULL) 
+            { 
+                struct dirent * ent; 
+          
+                while ((ent = readdir(rep)) != NULL) 
+                { 
+                    if (string(ent->d_name) != "." && string(ent->d_name) != "..") loadMenu->addChoice(string(ent->d_name)); // Type = -1 sorting file by name
+                } 
+                closedir(rep); 
+            }
+            attachedWidget[0]->addChoice(loadMenu);
+            attachedWidget[0]->addChoice("Save Map");
+            attachedWidget[0]->addChoice("Quit");
+        }
+    }
+
+    foo = attachedWidget[indices.tileset]->getChoice();
+    if (foo != "")
+    {
+        foo.erase(foo.begin(), foo.begin()+23);
+        if (foo[0] == ' ')
+            foo.erase(foo.begin());
+        attachedWidget[indices.tileset]->setFileLeft(tilesetDirectory+foo);
     }
 }
 
@@ -354,6 +404,15 @@ string Interactive::getChoice()
 
 void Interactive::draw(double elapsedTime)
 {
+    sf::Vector2i nSpriteToPull = attachedWidget[indices.tileset]->getNSpriteToPull();
+    if (nSpriteToPull.x > 0 and nSpriteToPull.y > 0)
+    {
+        sf::Vector2i posSpriteToPull = attachedWidget[indices.tileset]->getPosSpriteToPull();
+        map->setGhost(tilesetDirectory+attachedWidget[indices.tileset]->getFileLeft(), nSpriteToPull, posSpriteToPull);
+        attachedWidget[indices.tileset]->resetSelection();
+        attachedWidget[indices.mode]->setChoiceSet(0);
+        map->setState(ADD);
+    }
     if (enabled)
     {
         if (size.x != target->getSize().x);
@@ -413,8 +472,12 @@ TilesetDisplayer::TilesetDisplayer(sf::RenderTarget* w, int user_height): Widget
     selectRect.setOutlineColor(sf::Color(84,106,139));
     selectRect.setOutlineThickness(5.);
 
+    nSpriteToPull = sf::Vector2i(0,0);
+    posSpriteToPull = sf::Vector2i(0,0);
+    choice = "";
     string default_tileset = "base.png";
     isImLeft = false;
+    isImRight = false;
     offset = 5;
     heightChoice = 40;
     height = user_height;
@@ -422,11 +485,15 @@ TilesetDisplayer::TilesetDisplayer(sf::RenderTarget* w, int user_height): Widget
     sizeSprite = sf::Vector2i(32,32);
     yScroll = 32;
     fileLeft = "";
+    fileRight = "";
     position = sf::Vector2f(0,target->getSize().y-height);
     outlineLeft.setFillColor(sf::Color::Transparent);
     outlineLeft.setOutlineColor(sf::Color(84,106,139));
     outlineLeft.setPosition(position.x+offset, position.y+offset+2*heightChoice);
     outlineLeft.setOutlineThickness(offset);
+    outlineRight.setFillColor(sf::Color::Transparent);
+    outlineRight.setOutlineColor(sf::Color(84,106,139));
+    outlineRight.setOutlineThickness(offset);
     size.x = 0;
     size.y = height;
     if (imLeft.loadFromFile(default_tileset))
@@ -501,12 +568,72 @@ sf::Vector2i TilesetDisplayer::invConvertPosMouse(sf::Vector2i p)
     return p;
 }
 
+string TilesetDisplayer::getChoice()
+{
+    if (choice == "") return "";
+    string foo = choice;
+    choice = "";
+    return foo;
+}
+
+void TilesetDisplayer::mouseReleased()
+{
+    attachedWidget[0]->mouseReleased();
+    attachedWidget[1]->mouseReleased();
+    string foo = attachedWidget[0]->getChoice();
+    if (foo != "")
+        choice = foo;
+    else
+    {
+        foo = attachedWidget[1]->getChoice();
+        if (foo != "")
+            choice = foo;
+    }
+    isMousePressed = 0;
+    isMouseHere = 0;
+}
+
 string TilesetDisplayer::getFileLeft() const
 {
     return fileLeft;
 }
 
 sf::Vector2i TilesetDisplayer::getSizeSprite() const { return sizeSprite;}
+
+sf::Vector2i TilesetDisplayer::getNSpriteToPull() const { return nSpriteToPull;}
+
+sf::Vector2i TilesetDisplayer::getPosSpriteToPull() const { return posSpriteToPull;}
+
+void TilesetDisplayer::resetSelection()
+{
+    nSpriteToPull = sf::Vector2i(0,0);
+    select = select2 = 0;
+    isMousePressed = 0;
+}
+
+void TilesetDisplayer::setFileLeft(string file)
+{
+    if (imLeft.loadFromFile(file))
+    {
+        isImLeft = true;
+        fileLeft = file;
+        sf::Vector2u foo = imLeft.getSize();
+        size.x = 2*offset+foo.x;
+        textureLeft.create(foo.x, height-2*offset-2*heightChoice);
+        outlineLeft.setSize(sf::Vector2f(foo.x,height-2*offset-2*heightChoice));
+        sf::Sprite sprite;
+        sprite.setTexture(imLeft);
+        textureLeft.clear(sf::Color::White);
+        textureLeft.draw(sprite);
+        textureLeft.display();
+        spriteLeft.setTexture(textureLeft.getTexture());
+        spriteLeft.setPosition(position.x+offset, position.y+offset+2*heightChoice);
+        attachedWidget[0]->setSize(sf::Vector2f(size.x, heightChoice));
+        attachedWidget[1]->setSize(sf::Vector2f(size.x, heightChoice));
+        updateButton();
+    }
+    else cout<<"Unable to load image \""<<file<<"\".\n";
+}
 
 void TilesetDisplayer::setSizeSprite(sf::Vector2i user_sizeSprite) { sizeSprite = user_sizeSprite;}
 void TilesetDisplayer::setYScroll(int user_yScroll) { yScroll = user_yScroll;}
@@ -520,7 +647,7 @@ void TilesetDisplayer::windowResized()
 {
     sf::Vector2u foo = imLeft.getSize();
     height += target->getSize().y - sizeTarget.y;
-    sizeTarget.y = target->getSize().y;
+    sizeTarget = target->getSize();
     textureLeft.create(foo.x, height-2*offset-2*heightChoice);
     outlineLeft.setSize(sf::Vector2f(foo.x,height-2*offset-2*heightChoice));
     sf::Sprite sprite;
@@ -540,6 +667,8 @@ void TilesetDisplayer::updateButton()
     {
         windowResized();
     }
+    if (attachedWidget[0]->getIsMouseHere() or attachedWidget[1]->getIsMouseHere())
+        deltaMouseWheel = 0;
     if (deltaMouseWheel != 0)
     {
         deltaMouseWheel = deltaMouseWheel*yScroll;
@@ -566,10 +695,7 @@ void TilesetDisplayer::updateButton()
             {
                 select2 = 0;
                 select = 1;
-                /*if (spriteToPull != 0) delete[] spriteToPull;
-                spriteToPull = 0;
-                nsizeSprite.y = 0;
-                nsizeSprite.x = 0;*/
+                nSpriteToPull = sf::Vector2i(0,0);
             }
             else if (select)
             {
@@ -611,11 +737,10 @@ void TilesetDisplayer::updateButton()
             selectRect.setPosition(xmin,ymin);
             selectRect.setSize(sf::Vector2f(xmax-xmin, ymax-ymin));
 
-            /*nsizeSprite.x = round((xmax-xmin)/sizeSprite.x);
-            nsizeSprite.y = round((ymax-ymin)/sizeSprite.y);
-            spriteToPull = new int[2];
-            spriteToPull[0] = xmin;
-            spriteToPull[1] = ymin;*/
+            nSpriteToPull.x = round((xmax-xmin)/sizeSprite.x);
+            nSpriteToPull.y = round((ymax-ymin)/sizeSprite.y);
+            posSpriteToPull.x = xmin;
+            posSpriteToPull.y = ymin;
         }
     }
     sf::Sprite sprite;
@@ -624,6 +749,8 @@ void TilesetDisplayer::updateButton()
     textureLeft.draw(sprite);
     if (select or isMousePressed) textureLeft.draw(selectRect);
     textureLeft.display();
+    spriteLeft = sf::Sprite();
+    spriteLeft.setPosition(position.x+offset, position.y+offset+2*heightChoice);
     spriteLeft.setTexture(textureLeft.getTexture());
     deltaMouseWheel = 0;  
 }
@@ -631,10 +758,47 @@ void TilesetDisplayer::updateButton()
 void TilesetDisplayer::draw(float elapsedTime)
 {
     updateButton();
+    string foo = attachedWidget[0]->getCurrentChoice();
+    if (foo == "")
+        foo = attachedWidget[1]->getCurrentChoice();
+    if (foo != "")
+    {
+        foo.erase(foo.begin(), foo.begin()+23);
+        if (foo[0] == ' ')
+            foo.erase(foo.begin());
+        foo = tilesetDirectory+foo;
+
+        if (foo != fileRight and imRight.loadFromFile(foo))
+        {
+            isImRight = true;
+            fileRight = foo;
+            sf::Vector2u fooVec = imRight.getSize();
+            size.x = 2*offset+fooVec.x;
+            textureRight.create(fooVec.x, height-2*offset);
+            outlineRight.setSize(sf::Vector2f(fooVec.x,height-2*offset));
+            outlineRight.setPosition(sizeTarget.x-fooVec.x-offset,position.y+offset);
+            sf::Sprite sprite;
+            sprite.setTexture(imRight);
+            textureRight.clear(sf::Color::White);
+            textureRight.draw(sprite);
+            textureRight.display();
+            spriteRight = sf::Sprite();
+            spriteRight.setTexture(textureRight.getTexture());
+            spriteRight.setPosition(sizeTarget.x-fooVec.x-offset, position.y+offset);
+        }
+        else if (foo != fileRight) cout<<"Unable to open image \""<<foo<<"\".\n";
+        else if (foo == fileRight and not isImRight) isImRight = true;
+    }
+    else isImRight = false;
     if (isImLeft)
     {
         target->draw(spriteLeft);
         target->draw(outlineLeft);
+    }
+    if (isImRight)
+    {
+        target->draw(spriteRight);
+        target->draw(outlineRight);
     }
     for (int i=0; i<nAttachedWidget; i++)
         attachedWidget[i]->draw(elapsedTime);

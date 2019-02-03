@@ -64,8 +64,12 @@ class Widget{
     virtual bool getSignal() const { return false;}
     int getDeltaMouseWheel() const;
     virtual std::string getChoice() { return "";}
+    virtual std::string getCurrentChoice() const{ return "";};
     virtual int getChoiceSet() const { return -1;}
     virtual std::string getFileLeft() const { return "";}
+    virtual sf::Vector2i getNSpriteToPull() const { return sf::Vector2i(0,0);};
+    virtual sf::Vector2i getPosSpriteToPull() const { return sf::Vector2i(0,0);};
+    virtual void resetSelection(){};
     
     void setTarget(sf::RenderTarget* user_target);
     virtual void setPosition(sf::Vector2f user_position);
@@ -83,6 +87,7 @@ class Widget{
     virtual void setDetached(bool user_detached){};
     virtual void setDetachedPosition(sf::Vector2f setDetachedPosition){};
     virtual void setDetachedTarget(sf::RenderTarget* user_target){};
+    virtual void setFileLeft(std::string file){};
     
     virtual void testMouse(sf::Vector2i user_posMouse);
     virtual void testEvent(sf::Event event);

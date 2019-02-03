@@ -176,6 +176,17 @@ int PNG_Encoder::addTexture(string nameTexture)
 
 int PNG_Encoder::load()
 {
+    int lenFileMap = fileMap.size()-1;
+    if (fileMap[lenFileMap]=='t' and fileMap[lenFileMap-1]=='x' and fileMap[lenFileMap-2]=='t')
+    {
+        if (loadTxt(fileMap) != 0)
+            return 1;
+        fileMap[lenFileMap-2] = 'p';
+        fileMap[lenFileMap-1] = 'n';
+        fileMap[lenFileMap] = 'g';
+        return 0;
+    }
+
     xPixel = yPixel = modePixel = 0;
     if (!img.loadFromFile(fileMap))
     {

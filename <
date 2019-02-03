@@ -328,6 +328,12 @@ void Interactive::testEvent(sf::Event event)
     if (foo != "")
     {
         if (foo == "File: Quit") choice = "Quit";
+        else if (foo[7]=='L' and foo[8]=='o')
+        {
+            foo.erase(foo.begin(), foo.begin()+16);
+            cout<<"Loading "<<foo<<endl;
+            map->loadTxt(foo+".txt");
+        }
     }
 }
 
