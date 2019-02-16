@@ -7,12 +7,12 @@ using namespace std;
 
 Map::Map(): PNG_Encoder()
 {
-    nPrio = 4;
     position = sf::Vector2f(0,0);
     textureMap = vector<sf::RenderTexture >(nPrio);
     spriteMap = vector<sf::Sprite>(nPrio);
     for (int i=0; i<nPrio; i++)
         spriteMap[i].setPosition(position);
+    spritePlayers.setPosition(position);
 }
 
 Map::Map(string user_fileMap): Map()
@@ -22,6 +22,7 @@ Map::Map(string user_fileMap): Map()
     
 sf::Vector2f Map::getPosition() const { return position;}
 vector<sf::Sprite > Map::getRenderSprite() const { return spriteMap;}
+sf::RenderTexture* Map::getPlayerTexture() { return &players;}
 
 void Map::setPosition(sf::Vector2f user_position)
 {
@@ -47,6 +48,7 @@ void Map::updateSprite()
         for (int i=0; i<nPrio; i++)
         {
             textureMap[i].create(sizeMap.x*sizeSprite.x,sizeMap.y*sizeSprite.y);
+            players.create(sizeMap.x*sizeSprite.x,sizeMap.y*sizeSprite.y);
             textureMap[i].clear(sf::Color::Transparent);
             for (int j=0; j<nTextureInPrio[i]; j++)
             {
@@ -58,9 +60,12 @@ void Map::updateSprite()
             }
             sf::View fooView(sf::FloatRect(0,0,sizeMap.x*sizeSprite.x,sizeMap.y*sizeSprite.y));
             textureMap[i].setView(fooView);
+            players.setView(fooView);
             textureMap[i].display();
+            players.display();
             spriteMap[i] = sf::Sprite();
             spriteMap[i].setTexture(textureMap[i].getTexture());
+            spritePlayers.setTexture(players.getTexture());
         }
     }
 }
@@ -163,7 +168,8 @@ void IMap::setGhost(string fileTexture, sf::Vector2i nSpriteToPull, sf::Vector2i
     ghostTexture.create(nSpriteToPull.x*sizeSprite.x,nSpriteToPull.y*sizeSprite.y);
     sf::Sprite sprite;
     sprite.setTexture(texture[indexTexture]);
-    sprite.setTextureRect(sf::IntRect(posSpriteToPull.x,posSpriteToPull.y,nSpriteToPull.x*sizeSprite.x,nSpriteToPull.y*sizeSprite.y));
+    spriteRect = sf::IntRect(posSpriteToPull.x,posSpriteToPull.y,nSpriteToPull.x*sizeSprite.x,nSpriteToPull.y*sizeSprite.y);
+    sprite.setTextureRect(spriteRect);
     ghostTexture.draw(sprite);
     ghostTexture.display();
     isGhostSprite = true;
@@ -362,13 +368,129 @@ void IMap::updateSprite()
         if (ymax > sizeMap.y*sizeSprite.y)  ymax = sizeMap.y*sizeSprite.y;
         selectRect.setPosition(xmin,ymin);
         selectRect.setSize(sf::Vector2f(xmax-xmin, ymax-ymin));
+        if (state == ADD)
+        {
+            if (isGhostSprite)
+            {
+                addSpriteGhost();
+                select = select2 = 0;
+            }
+        }
     }
+}
+
+void IMap::addSpriteGhost()
+{
+    /*if (prio < 0 || prio > 3)
+    {
+        cout<<"Invalid priority !\n";
+        return;
+    }
+    //saveState = edited;
+    sprite fooSprite;
+    sf::IntRect fooRect;
+    string fooTexture;
+    sf::vector2i sizeTot = ghostTexture.getSize();
+    sizeTot.x /= sizeSprite.x;
+    sizeTot.y /= sizeSprite.y;
+    for (int ix=ghostPosition.x; ix<ghostPosition.x+sizeTot.x; ix++)
+    {
+        for (int iy=ghostPosition.x; iy<s.y/ySprites+lyS; iy++)
+        {
+            if (indexSpriteVec[prio][ix][iy][0] != -1)
+            {
+                fooSprite.x = ix*xSprites;
+                fooSprite.y = iy*ySprites;
+                fooRect = spriteVec[prio][indexSpriteVec[prio][ix][iy][0]][indexSpriteVec[prio][ix][iy][1]].getTextureRect();
+                fooSprite.xPNG = fooRect.left;
+                fooSprite.yPNG = fooRect.top;
+                fooTexture = fileTextureVec[iTextureVec[prio][indexSpriteVec[prio][ix][iy][0]]];
+                ctrlZObject->saveErasing(fooSprite, prio, passOrNotVec[prio][ix][iy], fooTexture);
+            }
+            removeSprite(prio, ix, iy);
+        }
+    }
+    ctrlZObject->saveAdding(s, prio, lxS, lyS);
+    int indexTexture = -1;
+    for (int j=0; j<nTextureVec[prio]; j++)
+    {
+        if (t == fileTextureVec[iTextureVec[prio][j]])
+            indexTexture = j;
+    }
+    if (indexTexture == -1)
+    {
+        sf::Sprite** foo3 = new sf::Sprite*[nTextureVec[prio]+1];
+        for (int j=0; j<nTextureVec[prio]; j++)
+        {
+            foo3[j] = new sf::Sprite[nSpriteVec[prio][j]];
+            for (int k=0; k<nSpriteVec[prio][j]; k++)
+                foo3[j][k] = spriteVec[prio][j][k];
+        }
+        iTextureVec[prio].push_back(addTexture(t));
+        nSpriteVec[prio].push_back(lxS*lyS);
+        foo3[nTextureVec[prio]] = new sf::Sprite[lxS*lyS];
+        sprite fooS = s;
+        spriteVec[prio].push_back(vector<sf::Sprite>(0));
+        for (int ix=0; ix<lxS; ix++)
+        {
+            for (int iy=0; iy<lyS; iy++)
+            {
+                fooS.x = s.x + ix*xSprites;
+                fooS.y = s.y + iy*ySprites;
+                fooS.xPNG = s.xPNG + (ix%nxS)*xSprites;
+                fooS.yPNG = s.yPNG + (iy%nyS)*ySprites;
+                foo3[nTextureVec[prio]][ix*lyS+iy].setTextureRect(sf::IntRect(fooS.xPNG,fooS.yPNG,xSprites,ySprites));
+                foo3[nTextureVec[prio]][ix*lyS+iy].setPosition(fooS.x,fooS.y);
+                spriteVec[prio][nTextureVec[prio]].push_back(foo3[nTextureVec[prio]][ix*lyS+iy]);
+                indexSpriteVec[prio][s.x/xSprites+ix][s.y/ySprites+iy][0] = nTextureVec[prio];
+                indexSpriteVec[prio][s.x/xSprites+ix][s.y/ySprites+iy][1] = ix*lyS+iy;
+            }
+        }
+        
+        nTextureVec[prio] += 1;
+        
+        for (int j=0; j<nTextureVec[prio]; j++)
+        {
+            delete[] foo3[j];
+            foo3[j] = 0;
+        }
+        delete[] foo3;
+        foo3 = 0;
+    }
+    else
+    {
+        sf::Sprite* foo = new sf::Sprite[nSpriteVec[prio][indexTexture]+lxS*lyS];
+        for (int k=0; k<nSpriteVec[prio][indexTexture]; k++)
+            foo[k] = spriteVec[prio][indexTexture][k];
+        
+        for (int ix=0; ix<lxS; ix++)
+        {
+            for (int iy=0; iy<lyS; iy++)
+            {
+                foo[nSpriteVec[prio][indexTexture]+ix*lyS+iy].setTexture(textureVec[iTextureVec[prio][indexTexture]]);
+                foo[nSpriteVec[prio][indexTexture]+ix*lyS+iy].setTextureRect(sf::IntRect(s.xPNG+ (ix%nxS)*xSprites,s.yPNG + (iy%nyS)*ySprites,xSprites,ySprites));
+                foo[nSpriteVec[prio][indexTexture]+ix*lyS+iy].setPosition(s.x + ix*xSprites,s.y + iy*ySprites);
+                spriteVec[prio][indexTexture].push_back(foo[nSpriteVec[prio][indexTexture]+ix*lyS+iy]);
+                indexSpriteVec[prio][s.x/xSprites+ix][s.y/ySprites+iy][0] = indexTexture;
+                indexSpriteVec[prio][s.x/xSprites+ix][s.y/ySprites+iy][1] = nSpriteVec[prio][indexTexture]+ix*lyS+iy;
+            }
+        }
+        nSpriteVec[prio][indexTexture] += lxS*lyS;
+            
+        delete[] foo;
+        foo = 0;
+    }
+    resetTextureSprite();
+    */
 }
 
 void IMap::draw(float elapsedTime)
 {
     updateSprite();
     bigRenderTexture.clear(colorTexture);
+    spritePlayers.setPosition(0,0);
+    players.display();
+    spritePlayers.setTexture(players.getTexture());
     for (int i=0; i<nPrio; i++)
     {
         spriteMap[i].setPosition(0,0);
@@ -377,7 +499,10 @@ void IMap::draw(float elapsedTime)
         else
             spriteMap[i].setColor(sf::Color(255,255,255,64));
         bigRenderTexture.draw(spriteMap[i]);
+        if (i == nPrio/2)
+            bigRenderTexture.draw(spritePlayers);
     }
+    players.clear(sf::Color::Transparent);
     if (grid)
     {
         for (int i=0; i<sizeMap.x-1; i++)

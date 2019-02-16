@@ -40,11 +40,16 @@ int main()
     lolita.setSize(sf::Vector2i(32,48));
     //lolita.setGrid(false);
     lolita.setPosition(sf::Vector2f(2*32,10*32));
-    
-    
+       
     IMap map(&window,"level1_save.png");
     //map.loadTxt("level1.txt");
     map.load();
+ 
+    Car car("voiture", map.getPlayerTexture());
+    car.loadFromFile("AC_002.png");
+    car.setSize(sf::Vector2i(32,48));
+    car.setPosition(sf::Vector2f(500,200));
+
 
     Interactive Int(&window, &map);
     map.addException(sf::Vector2i(0,0),0);
@@ -93,9 +98,15 @@ int main()
             Int.testEvent(event);
             map.testEvent(event);
             lolita.testEvent(event);
+            car.testEvent(event);
             if (event.type == sf::Event::Closed)
             {
                 window.close();
+            }
+            else if (event.type == sf::Event::MouseButtonPressed)
+            {
+                if (event.mouseButton.button == sf::Mouse::Right)
+                    car.setPositionMap(posMouse);
             }
         }
         time2 = clock2.restart();
@@ -124,6 +135,7 @@ int main()
         if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
         label++;
         lolita.draw(elapsedTime.asSeconds());
+        car.draw(elapsedTime.asSeconds());
         time2 = clock2.restart();
 
         if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;

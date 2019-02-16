@@ -4,6 +4,7 @@
 #include "SFML/Graphics.hpp"
 #include "bouncer.h"
 #include <string>
+#include <cmath>
 
 int convertDir(int dir);
 
@@ -125,6 +126,41 @@ class Player: public Character{
     
     Player& operator=(const Player& user_object);
     friend std::ostream& operator<<(std::ostream& f, const Player& user_object);
+};
+
+class Car: public Character{
+
+    private:
+    
+    float theta, dtheta;
+    float dv;
+    float maxVelocity;
+    sf::Keyboard::Key currentKey;
+    float time;
+    float thresholdMove;
+    
+    public:
+    
+    Car();
+    Car(std::string user_name);
+    Car(sf::RenderTarget* user_target);
+    Car(std::string user_name, sf::RenderTarget* user_target);
+    Car(const Car& user_object);
+    ~Car(){};
+    
+    sf::Keyboard::Key getCurrentKey() const;
+    float getTime() const;
+    float getThresholdMove() const;
+    
+    void setTime(float user_time);
+    void setThresholdMove(float user_thresholdMove);
+    void setPositionMap(sf::Vector2i posMouse);
+    
+    void testEvent(sf::Event event);
+    void draw(float elapsedTime);
+    
+    Car& operator=(const Car& user_object);
+    friend std::ostream& operator<<(std::ostream& f, const Car& user_object);
 };
 
 #endif

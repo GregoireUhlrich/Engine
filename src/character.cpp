@@ -632,3 +632,143 @@ ostream& operator<<(ostream& f, const Player& user_object)
     
     return f;
 }
+
+Car::Car(): Character()
+{
+    theta = M_PI*3./4;
+    dtheta = M_PI/10;
+    maxVelocity = 100;
+    dv = maxVelocity/20;
+    
+    currentKey = sf::Keyboard::Unknown;
+    thresholdMove = 0.1;
+    time = 0;
+}
+
+Car::Car(string user_name): Character()
+{
+    name = user_name;
+}
+
+Car::Car(sf::RenderTarget* user_target): Car()
+{
+    target = user_target;
+}
+
+Car::Car(string user_name, sf::RenderTarget* user_target): Car()
+{
+    name = user_name;
+    target = user_target;
+}
+
+Car::Car(const Car& user_object)
+{
+    *this = user_object;
+}
+    
+sf::Keyboard::Key Car::getCurrentKey() const { return currentKey;}
+float Car::getTime() const { return time;}
+float Car::getThresholdMove() const { return thresholdMove;}
+
+void Car::setPositionMap(sf::Vector2i posMouse)
+{
+    sf::Vector2f pos = target->mapPixelToCoords(posMouse);
+    position.x = pos.x;
+    position.y = pos.y;
+    sprite.setPosition(position);
+}
+
+void Car::setTime(float user_time)
+{
+    time = user_time;
+}
+void Car::setThresholdMove(float user_thresholdMove)
+{
+    thresholdMove = user_thresholdMove;
+}
+
+void Car::testEvent(sf::Event event)
+{
+    if (event.type == sf::Event::KeyPressed)
+    {
+        if (event.key.code == sf::Keyboard::Q)
+            maxVelocity += 20;
+        else if (event.key.code == sf::Keyboard::W)
+            maxVelocity -= 20;
+        dv = maxVelocity/20.;
+    }
+}
+
+void Car::draw(float elapsedTime)
+{
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+    {
+        moving = true;
+        velocity = min(maxVelocity, velocity + dv);
+    }
+    else
+    {
+        velocity = max(float(0), velocity - dv);
+        if (velocity == 0)
+            moving = false;
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+    {
+        if (currentKey == sf::Keyboard::Left)
+        {
+            time += elapsedTime;
+            if (time > thresholdMove)
+            {
+                time = 0;
+                theta -= dtheta;
+            }
+        }
+        else
+            currentKey = sf::Keyboard::Left;
+    }
+    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+    {
+        if (currentKey == sf::Keyboard::Right)
+        {
+            time += elapsedTime;
+            if (time > thresholdMove)
+            {
+                time = 0;
+                theta += dtheta;
+            }
+        }
+        else
+            currentKey = sf::Keyboard::Right;
+    }
+    else currentKey = sf::Keyboard::Unknown;
+    if (moving)
+    {
+        sprite.move(+velocity*elapsedTime*sin(theta), -velocity*elapsedTime*cos(theta));
+    }
+    sf::FloatRect rect = sprite.getLocalBounds();
+    sprite.setOrigin(rect.width/2, rect.height/2);
+    sprite.setRotation(theta*180/M_PI);
+
+    target->draw(sprite);
+}
+
+
+Car& Car::operator=(const Car& user_object)
+{
+    Character::operator=(user_object);
+    currentKey = user_object.currentKey;
+    time = user_object.time;
+    thresholdMove = user_object.thresholdMove;
+
+    return *this;
+}
+
+ostream& operator<<(ostream& f, const Car& user_object)
+{
+    Character foo = user_object;
+    cout<<foo;
+    cout<<"CurrentKey: "<<user_object.currentKey<<endl;
+    cout<<"ElapsedTime: "<<user_object.time<<endl;
+    
+    return f;
+}

@@ -19,10 +19,12 @@ class PNG_Encoder{
     bool errorPeriodicity;
     bool errorOverFlow;
     
+    int nPrio;
     std::string fileMap;
     std::vector<int> nTextureInPrio;
     std::vector<std::vector<int> > nSprite;
     std::vector<std::vector<std::vector<sf::Sprite > > > sprite;
+    std::vector<std::vector<std::vector<std::vector<int> > > > indexSprite;
     std::vector<std::vector<int > > iTexture;
     int nTextureTot;
     std::vector<std::string> fileTexture;

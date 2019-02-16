@@ -9,11 +9,12 @@ using namespace std;
 PNG_Encoder::PNG_Encoder()
 {
     fileMap = "";
-    nTextureInPrio = vector<int>(4);
-    nSprite = vector<vector<int> >(4);
-    sprite = vector<vector<vector<sf::Sprite> > >(4);
-    iTexture = vector<vector<int> >(4);
-    for (int i=0; i<4; i++)
+    nPrio = 4;
+    nTextureInPrio = vector<int>(nPrio);
+    nSprite = vector<vector<int> >(nPrio);
+    sprite = vector<vector<vector<sf::Sprite> > >(nPrio);
+    iTexture = vector<vector<int> >(nPrio);
+    for (int i=0; i<nPrio; i++)
     {
         nTextureInPrio[i] = 0;
         nSprite[i] = vector<int>(0);
@@ -197,7 +198,7 @@ int PNG_Encoder::load()
     sizeImg = fooSize.x;
     sizeMap.x = readInt(); sizeMap.y = readInt();
     int fooX, fooY, fooXPNG, fooYPNG;
-    for (int i=0; i<4; i++)
+    for (int i=0; i<nPrio; i++)
     {
         nTextureInPrio[i] = readInt();
         nSprite[i] = vector<int>(nTextureInPrio[i]);
@@ -220,8 +221,8 @@ int PNG_Encoder::load()
     bouncer.setSizeMap(sizeMap);
     /*
     int nExceptions = readInt();
-    vector<int> exceptions(4*nExceptions);
-    for (int i=0; i<4*nExceptions; i++)
+    vector<int> exceptions(nPrio*nExceptions);
+    for (int i=0; i<nPrio*nExceptions; i++)
         exceptions[i] = readInt();*/
         
     int nExceptions = readInt();
@@ -253,15 +254,15 @@ int PNG_Encoder::load()
 int PNG_Encoder::save()
 {
     xPixel = yPixel = modePixel = 0;
-    int nTot = 4+2; // 4 times a number of textures + the name of the encoder + lx+ly
-    for (int i=0; i<4; i++)
+    int nTot = nPrio+2; // nPrio times a number of textures + the name of the encoder + lx+ly
+    for (int i=0; i<nPrio; i++)
     {
         nTot += nTextureInPrio[i]; // number of sprites
         for (int j=0; j<nTextureInPrio[i]; j++)
         {
             nTot += fileTexture[iTexture[i][j]].length()+1; // Size of texture names
             for (int k=0; k<nSprite[i][j]; k++)
-                nTot += 4; // for each sprite 4 int.
+                nTot += nPrio; // for each sprite nPrio int.
         }
     }
     nTot += 1; // nExceptions
@@ -275,7 +276,7 @@ int PNG_Encoder::save()
     writeInt(sizeMap.x); writeInt(sizeMap.y);
     sf::Vector2f fooPos;
     sf::IntRect fooRect;
-    for (int i=0; i<4; i++)
+    for (int i=0; i<nPrio; i++)
     {
         writeInt(nTextureInPrio[i]);
         for (int j=0; j<nTextureInPrio[i]; j++)
@@ -299,7 +300,7 @@ int PNG_Encoder::save()
     {
         for (int j=0; j<sizeMap.y; j++)
         {
-            for (int k=0; k<4; k++)
+            for (int k=0; k<nPrio; k++)
             {
                 if (!passOrNot[i][j][k])
                 {
@@ -362,7 +363,7 @@ PNG_Encoder& PNG_Encoder::operator=(const PNG_Encoder& user_object)
 
 bool PNG_Encoder::operator==(const PNG_Encoder& user_object)
 {
-    for (int i=0; i<4; i++)
+    for (int i=0; i<nPrio; i++)
     {
         if (nTextureInPrio[i] != user_object.nTextureInPrio[i]) return 0;
         for (int j=0; j<nTextureInPrio[i]; j++)
@@ -389,7 +390,7 @@ ostream& operator<<(std::ostream& f, const PNG_Encoder& user_object)
 {
     cout<<"Name: "<<user_object.fileMap<<endl;
     cout<<"lx = "<<user_object.sizeMap.x<<"   ly = "<<user_object.sizeMap.y<<endl;
-    for (int i=0; i<4; i++)
+    for (int i=0; i<user_object.nPrio; i++)
     {
         cout<<"nTextureInPrio["<<i<<"] = "<<user_object.nTextureInPrio[i]<<endl;
         for (int j=0; j<user_object.nTextureInPrio[i]; j++)
@@ -398,7 +399,7 @@ ostream& operator<<(std::ostream& f, const PNG_Encoder& user_object)
         }
     }
     cout<<endl;
-    for (int i=0; i<4; i++)
+    for (int i=0; i<user_object.nPrio; i++)
         for (int j=0; j<user_object.nTextureInPrio[i]; j++)
             cout<<"Prio "<<i<<" texture "<<j<<": "<<user_object.fileTexture[user_object.iTexture[i][j]]<<endl;
     cout<<endl;
@@ -413,14 +414,13 @@ ostream& operator<<(std::ostream& f, const PNG_Encoder& user_object)
 int PNG_Encoder::loadTxt(string stringFile)
 {
     ifstream file(stringFile.c_str(), ios::in);
-    int nPrio = 4;
     int fooX, fooY, fooXPNG, fooYPNG;
     if (file)
     {
         string foo;
         file>>sizeMap.x>>sizeMap.y>>foo;
         bouncer.setSizeMap(sizeMap);
-        for (int i=0; i<4; i++)
+        for (int i=0; i<nPrio; i++)
         {    
             file>>foo>>nTextureInPrio[i]>>foo;
             if (nTextureInPrio[i] > 0)
@@ -453,10 +453,10 @@ int PNG_Encoder::loadTxt(string stringFile)
         }
         int nExceptions;
         file>>foo>>nExceptions>>foo;
-        vector<int> exceptions(4*nExceptions);
+        vector<int> exceptions(nPrio*nExceptions);
         for (int i=0; i<nExceptions; i++)
         {
-            file>>exceptions[4*i]>>exceptions[4*i+1]>>exceptions[4*i+2]>>exceptions[4*i+3];
+            file>>exceptions[nPrio*i]>>exceptions[nPrio*i+1]>>exceptions[nPrio*i+2]>>exceptions[nPrio*i+3];
         }
         file>>nEvents>>foo;
         file.ignore();

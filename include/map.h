@@ -18,12 +18,12 @@ struct PropZoom{
 class Map: public PNG_Encoder{
 
     protected:
-
-    int nPrio;
     
     sf::Vector2f position;
     std::vector<sf::RenderTexture > textureMap;
     std::vector<sf::Sprite > spriteMap;
+    sf::RenderTexture players;
+    sf::Sprite spritePlayers;
     
     void updateSprite();
    
@@ -35,6 +35,7 @@ class Map: public PNG_Encoder{
     
     sf::Vector2f getPosition() const;
     std::vector<sf::Sprite > getRenderSprite() const;
+    sf::RenderTexture* getPlayerTexture();
     
     void setPosition(sf::Vector2f user_position);
     void setSizeSprite(sf::Vector2i user_sizeSprite);
@@ -83,6 +84,7 @@ class IMap: public Map{
     sf::RenderTexture ghostTexture;
     std::string ghostFileTexture;
     sf::Vector2i ghostPosition;
+    sf::IntRect spriteRect;
 
     bool select, select2;
     sf::RectangleShape selectRect;
@@ -105,6 +107,7 @@ class IMap: public Map{
     void setGrid(bool user_grid);
     void setPass(bool user_pass);
     void setGhost(std::string texture, sf::Vector2i nSpriteToPull, sf::Vector2i posSpriteToPull);
+    void addSpriteGhost();
 
     void testEvent(sf::Event event);
     void mousePressed();
