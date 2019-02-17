@@ -30,8 +30,9 @@ class Bouncer{
     void setSizeMap(sf::Vector2i user_sizeMap);
     
     void addException(sf::Vector2i position, int direction);
-    bool ask(sf::Vector2f position, sf::Vector2i sizeSprite ,int direction);
-    bool ask(sf::Vector2i position);
+    bool ask(sf::Vector2f position, sf::Vector2i sizeSprite ,int direction) const;
+    bool ask(sf::Vector2f position, sf::Vector2i sizeSprite) const;
+    bool ask(sf::Vector2i position) const;
         
     Bouncer& operator=(const Bouncer& user_object);
     friend std::ostream& operator<<(std::ostream& f, const Bouncer& user_object);

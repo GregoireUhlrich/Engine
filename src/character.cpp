@@ -633,16 +633,62 @@ ostream& operator<<(ostream& f, const Player& user_object)
     return f;
 }
 
+int sgn(float x)
+{
+    if (x > 0) return 1;
+    if (x < 0) return -1;
+    return 0;
+}
+
+float modulo_2pi(float theta)
+{
+    if (theta < 0)
+    {
+        int n = floor(abs(theta)/(2*M_PI));
+        return theta+(n+1)*2*M_PI;
+    }
+    int n = floor(theta/(2*M_PI));
+    return theta - 2*n*M_PI;
+}
+
+float angle(float a, float b)
+{
+    if (b == 0)
+    {
+        if (a >= 0) return 0;
+        return M_PI;
+    }
+    if (a > 0) return atan(b/a);
+    if (a < 0) return M_PI-atan(b/abs(a));
+    return 0;
+}
+
 Car::Car(): Character()
 {
+    driftEffect = 40; // 0 = pas de drift
+    accroche = 0.65; // entre 0 et 1
     theta = M_PI*3./4;
-    dtheta = M_PI/10;
-    maxVelocity = 100;
-    dv = maxVelocity/20;
+    thetaDir = theta;
+    dtheta = M_PI/16;
+    omega = 0;
+    attenuation_omega = 3;
+    maxVelocity = 800;
+    acceleration = 2*maxVelocity; 
     
     currentKey = sf::Keyboard::Unknown;
-    thresholdMove = 0.1;
+    thresholdMove = 0.03;
     time = 0;
+    timeKey = 0;
+    keyDefinition = vector<int>(sf::Keyboard::KeyCount);
+    for (int i=0; i<sf::Keyboard::KeyCount; i++)
+        keyDefinition[i] = -1;
+    keyDefinition[sf::Keyboard::Right] = (int)sf::Keyboard::Right;
+    keyDefinition[sf::Keyboard::Left] = (int)sf::Keyboard::Left;
+    keyDefinition[sf::Keyboard::Up] = (int)sf::Keyboard::Up;
+    keyDefinition[sf::Keyboard::Down] = (int)sf::Keyboard::Down;
+
+    shiftPosition = sf::Vector2f(0,0);
+    grid = false;
 }
 
 Car::Car(string user_name): Character()
@@ -669,6 +715,20 @@ Car::Car(const Car& user_object)
 sf::Keyboard::Key Car::getCurrentKey() const { return currentKey;}
 float Car::getTime() const { return time;}
 float Car::getThresholdMove() const { return thresholdMove;}
+float Car::getTheta() const { return theta;}
+sf::Vector2i Car::getSize() const { return size;}
+sf::Vector2f Car::getVectorVelocity() const { return sf::Vector2f(velocity*cos(thetaDir),-velocity*sin(thetaDir));}
+
+bool Car::isValid(sf::Vector2f newPos) const
+{
+    float deltaX = size.x/2*cos(theta) + size.y/2*sin(theta);
+    float deltaY = size.y/2*cos(theta) - size.x/2*sin(theta);
+    if (not bouncer.ask(sf::Vector2f(position.x+deltaX,position.y+deltaY), sizeSprite)) return false;
+    if (not bouncer.ask(sf::Vector2f(position.x+deltaX,position.y-deltaY), sizeSprite)) return false;
+    if (not bouncer.ask(sf::Vector2f(position.x-deltaX,position.y+deltaY), sizeSprite)) return false;
+    if (not bouncer.ask(sf::Vector2f(position.x-deltaX,position.y-deltaY), sizeSprite)) return false;
+    return true;
+}
 
 void Car::setPositionMap(sf::Vector2i posMouse)
 {
@@ -687,66 +747,137 @@ void Car::setThresholdMove(float user_thresholdMove)
     thresholdMove = user_thresholdMove;
 }
 
+void Car::setKeyDefinition(sf::Keyboard::Key keyToPress, sf::Keyboard::Key keyToUnderstand)
+{
+    keyDefinition[keyToUnderstand] = (int)keyToPress;
+}
+
+void Car::setVelocity(float t_velocity)
+{
+    if (abs (t_velocity) < maxVelocity)
+        velocity = t_velocity;
+    else
+        velocity = maxVelocity*sgn(t_velocity);
+}
+
+void Car::setVectorVelocity(sf::Vector2f vector)
+{
+    velocity = norm(vector);
+    thetaDir = angle(-vector.y,vector.x);
+}
+
+void Car::addAngularVelocity(float t_omega)
+{
+    omega += t_omega;
+}
+
 void Car::testEvent(sf::Event event)
 {
     if (event.type == sf::Event::KeyPressed)
     {
-        if (event.key.code == sf::Keyboard::Q)
-            maxVelocity += 20;
-        else if (event.key.code == sf::Keyboard::W)
-            maxVelocity -= 20;
-        dv = maxVelocity/20.;
+        float old = maxVelocity;
+        if (event.key.code == sf::Keyboard::Add)
+            maxVelocity += 100;
+        else if (event.key.code == sf::Keyboard::Subtract)
+            maxVelocity -= 100;
+        acceleration *= maxVelocity/old;
     }
 }
 
 void Car::draw(float elapsedTime)
 {
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+    time += elapsedTime;
+    float oldTheta = theta;
+    float dv = acceleration*elapsedTime;
+    thetaDir += omega*elapsedTime;
+    theta += omega*elapsedTime;
+    bool keyPressed = false;
+    if (sf::Keyboard::isKeyPressed((sf::Keyboard::Key)(keyDefinition[sf::Keyboard::Up])))
     {
         moving = true;
+        keyPressed = true;
         velocity = min(maxVelocity, velocity + dv);
+    }
+    else if (sf::Keyboard::isKeyPressed((sf::Keyboard::Key)(keyDefinition[sf::Keyboard::Down])))
+    {
+        moving = true;
+        keyPressed = true;
+        velocity = max(-1*maxVelocity, velocity - dv);
     }
     else
     {
-        velocity = max(float(0), velocity - dv);
+        if (abs(velocity) < dv/2) velocity = 0;
+        else velocity -= sgn(velocity)*dv/2;
         if (velocity == 0)
+        {
             moving = false;
+            thetaDir = theta;
+        }
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+    if (sf::Keyboard::isKeyPressed((sf::Keyboard::Key)(keyDefinition[sf::Keyboard::Left])))
     {
+        keyPressed = true;
         if (currentKey == sf::Keyboard::Left)
         {
-            time += elapsedTime;
-            if (time > thresholdMove)
+            timeKey += elapsedTime;
+            if (timeKey > thresholdMove)
             {
-                time = 0;
                 theta -= dtheta;
+                timeKey = 0;
             }
         }
         else
             currentKey = sf::Keyboard::Left;
     }
-    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+    else if (sf::Keyboard::isKeyPressed((sf::Keyboard::Key)(keyDefinition[sf::Keyboard::Right])))
     {
+        keyPressed = true;
         if (currentKey == sf::Keyboard::Right)
         {
-            time += elapsedTime;
-            if (time > thresholdMove)
+            timeKey += elapsedTime;
+            if (timeKey > thresholdMove)
             {
-                time = 0;
                 theta += dtheta;
+                timeKey = 0;
             }
         }
         else
             currentKey = sf::Keyboard::Right;
     }
     else currentKey = sf::Keyboard::Unknown;
-    if (moving)
+    theta = modulo_2pi(theta);
+    if (driftEffect > 0 and keyPressed)
     {
-        sprite.move(+velocity*elapsedTime*sin(theta), -velocity*elapsedTime*cos(theta));
+        float velocity_t[2]{sin(thetaDir),-cos(thetaDir)};
+        float velocity_d[2]{sin(theta), -cos(theta)};
+        float alpha = (abs(velocity)/maxVelocity)*driftEffect*(1-accroche*abs(cos(theta-thetaDir)));
+        float velocity_t_dt[2]{(alpha*velocity_t[0]+velocity_d[0]),(alpha*velocity_t[1]+velocity_d[1])};
+        thetaDir = angle(-velocity_t_dt[1],velocity_t_dt[0]);
+    }
+    else if (keyPressed) thetaDir = theta;
+    if (omega != 0)
+    {
+        float attenuation = attenuation_omega*(1+3*keyPressed);
+        if (abs(omega) < elapsedTime*attenuation)
+            omega = 0;
+        else
+            omega -= sgn(omega)*attenuation*elapsedTime;
+    }
+    if (time > thresholdMove) time = 0;
+    if (moving or velocity != 0)
+    {
+        sf::Vector2f newPos;
+        newPos.x = position.x+velocity*elapsedTime*sin(thetaDir);
+        newPos.y = position.y-velocity*elapsedTime*cos(thetaDir);
+        if (isValid(newPos))
+        {
+            position = newPos;
+        }
+        //sprite.move(+velocity*elapsedTime*sin(thetaDir), -velocity*elapsedTime*cos(thetaDir));
     }
     sf::FloatRect rect = sprite.getLocalBounds();
     sprite.setOrigin(rect.width/2, rect.height/2);
+    sprite.setPosition(position);
     sprite.setRotation(theta*180/M_PI);
 
     target->draw(sprite);
@@ -771,4 +902,234 @@ ostream& operator<<(ostream& f, const Car& user_object)
     cout<<"ElapsedTime: "<<user_object.time<<endl;
     
     return f;
+}
+
+float distance(sf::Vector2i v1, sf::Vector2i v2)
+{
+    return sqrt(pow(v1.x-v2.x,2)+pow(v1.y-v2.y,2));
+}
+float distance(sf::Vector2f v1, sf::Vector2f v2)
+{
+    return sqrt(pow(v1.x-v2.x,2)+pow(v1.y-v2.y,2));
+}
+float scalar(sf::Vector2f v1, sf::Vector2f v2)
+{
+    return v1.x*v2.x + v1.y*v2.y;
+}
+float cross(sf::Vector2f v1, sf::Vector2f v2)
+{
+    return v1.x*v2.y - v1.y*v2.x;
+}
+float norm(sf::Vector2i v)
+{
+    return sqrt(v.x*v.x+v.y*v.y);
+}
+float norm(sf::Vector2f v)
+{
+    return sqrt(v.x*v.x+v.y*v.y);
+}
+sf::Vector2f rotation(float theta, sf::Vector2f v)
+{
+    sf::Vector2f rep;
+    rep.x = cos(theta)*v.x - sin(theta)*v.y;
+    rep.y = cos(theta)*v.y + sin(theta)*v.x;
+
+    return rep;
+}
+
+void testCollision(Car* car1,Car* car2)
+{
+    sf::Vector2f pos1 = car1->getPosition();
+    sf::Vector2f pos2 = car2->getPosition();
+    sf::Vector2i size1 = car1->getSize();
+    sf::Vector2i size2 = car2->getSize();
+    float theta1 = car1->getTheta();
+    float theta2 = car2->getTheta();
+    if (norm(size1)/2+norm(size2)/2 < distance(pos1,pos2))
+    {
+        return;
+    }
+    sf::Vector2f v1 = car1->getVectorVelocity();
+    sf::Vector2f v2 = car2->getVectorVelocity();
+
+    sf::Vector2f coin;
+    float deltaX = size1.x/2;
+    float deltaY = size1.y/2;
+    coin.x = deltaX;
+    coin.y = deltaY;
+    coin = rotation(theta1,coin);
+    coin.x += pos1.x - pos2.x;
+    coin.y += pos1.y - pos2.y;
+    coin = rotation(-theta2,coin);
+    if (coin.x > -size2.x/2 and coin.x < size2.x/2 and coin.y > -size2.y/2 and coin.y < size2.y/2)
+    {
+        Collision(car2, car1, coin);
+    }
+    coin.x = deltaX;
+    coin.y = -deltaY;
+    coin = rotation(theta1,coin);
+    coin.x += pos1.x - pos2.x;
+    coin.y += pos1.y - pos2.y;
+    coin = rotation(-theta2,coin);
+    if (coin.x > -size2.x/2 and coin.x < size2.x/2 and coin.y > -size2.y/2 and coin.y < size2.y/2)
+    {
+        Collision(car2, car1, coin);
+    }
+    coin.x = -deltaX;
+    coin.y = deltaY;
+    coin = rotation(theta1,coin);
+    coin.x += pos1.x - pos2.x;
+    coin.y += pos1.y - pos2.y;
+    coin = rotation(-theta2,coin);
+    if (coin.x > -size2.x/2 and coin.x < size2.x/2 and coin.y > -size2.y/2 and coin.y < size2.y/2)
+    {
+        Collision(car2, car1, coin);
+    }
+    coin.x = -deltaX;
+    coin.y = -deltaY;
+    coin = rotation(theta1,coin);
+    coin.x += pos1.x - pos2.x;
+    coin.y += pos1.y - pos2.y;
+    coin = rotation(-theta2,coin);
+    if (coin.x > -size2.x/2 and coin.x < size2.x/2 and coin.y > -size2.y/2 and coin.y < size2.y/2)
+    {
+        Collision(car2, car1, coin);
+    }
+    deltaX = size2.x/2;
+    deltaY = size2.y/2;
+    coin.x = deltaX;
+    coin.y = deltaY;
+    coin = rotation(theta2,coin);
+    coin.x += pos2.x - pos1.x;
+    coin.y += pos2.y - pos1.y;
+    coin = rotation(-theta1,coin);
+    if (coin.x > -size1.x/2 and coin.x < size1.x/2 and coin.y > -size1.y/2 and coin.y < size1.y/2)
+    {
+        Collision(car1, car2, coin);
+    }
+    coin.x = deltaX;
+    coin.y = -deltaY;
+    coin = rotation(theta2,coin);
+    coin.x += pos2.x - pos1.x;
+    coin.y += pos2.y - pos1.y;
+    coin = rotation(-theta1,coin);
+    if (coin.x > -size1.x/2 and coin.x < size1.x/2 and coin.y > -size1.y/2 and coin.y < size1.y/2)
+    {
+        Collision(car1, car2, coin);
+    }
+    coin.x = -deltaX;
+    coin.y = deltaY;
+    coin = rotation(theta2,coin);
+    coin.x += pos2.x - pos1.x;
+    coin.y += pos2.y - pos1.y;
+    coin = rotation(-theta1,coin);
+    if (coin.x > -size1.x/2 and coin.x < size1.x/2 and coin.y > -size1.y/2 and coin.y < size1.y/2)
+    {
+        Collision(car1, car2, coin);
+    }
+    coin.x = -deltaX;
+    coin.y = -deltaY;
+    coin = rotation(theta2,coin);
+    coin.x += pos2.x - pos1.x;
+    coin.y += pos2.y - pos1.y;
+    coin = rotation(-theta1,coin);
+    if (coin.x > -size1.x/2 and coin.x < size1.x/2 and coin.y > -size1.y/2 and coin.y < size1.y/2)
+    {
+        Collision(car1, car2, coin);
+    }
+}
+
+void Collision(Car* car1, Car* car2, sf::Vector2f coin) // car2 rentre dans car 1 par l'angle coin (0 = (+,+), 1 = (+,-), 2 = (-,+), 3 = (-,-))
+{
+    sf::Vector2f pos1 = car1->getPosition();
+    sf::Vector2f pos2 = car2->getPosition();
+    sf::Vector2i size1 = car1->getSize();
+    sf::Vector2i size2 = car2->getSize();
+    float theta1 = car1->getTheta();
+    float theta2 = car2->getTheta();
+
+    //cout<<car2->getName()<<" in "<<car1->getName()<<endl;
+    //cout<<"Pos rel = "<<pos2.x<<"  "<<pos2.y<<endl;
+    //cout<<"Angle rel: "<<theta2<<endl;
+
+    pos2.x -= pos1.x;
+    pos2.y -= pos1.y;
+    pos2 = rotation(-theta1,pos2);
+    sf::Vector2f oldCoin;
+
+    float XYCollision = size1.y*(0.5-pos2.x/size1.x);
+
+    if (pos2.y > XYCollision xor pos2.y > -XYCollision)
+    {
+       // X Collision 
+       float deltaX;
+       if (coin.x < 0)
+           deltaX = -size1.x/2-coin.x;
+       else
+           deltaX = size1.x/2-coin.x;
+       oldCoin = coin;
+       coin.x += deltaX/2;
+       pos2.x = pos2.x+deltaX/2;
+       pos2.y = pos2.y;
+       pos2 = rotation(theta1,pos2);
+       pos2.x += pos1.x;
+       pos2.y += pos1.y;
+       coin = rotation(theta1,coin);
+       coin += pos1;
+       oldCoin = rotation(theta1,oldCoin);
+       oldCoin += pos1;
+       pos1.x -= cos(theta1)*deltaX/2;
+       pos1.y -= sin(theta1)*deltaX/2;
+       car1->setPosition(pos1);
+       car2->setPosition(pos2);
+    }
+    else
+    {
+        // Y Collision
+       float deltaY;
+       if (coin.y < 0)
+           deltaY = -size1.y/2-coin.y;
+       else
+           deltaY = size1.y/2-coin.y;
+       pos2.x = pos2.x;
+       oldCoin = coin;
+       coin.y += deltaY/2;
+       pos2.y = pos2.y+deltaY/2;
+       pos2 = rotation(theta1,pos2);
+       pos2.x += pos1.x;
+       pos2.y += pos1.y;
+       coin = rotation(theta1,coin);
+       coin += pos1;
+       oldCoin = rotation(theta1,oldCoin);
+       oldCoin += pos1;
+       pos1.y -= cos(theta1)*deltaY/2;
+       pos1.x += sin(theta1)*deltaY/2;
+       car1->setPosition(pos1);
+       car2->setPosition(pos2);
+    }
+
+    sf::Vector2f v1 = car1->getVectorVelocity();
+    sf::Vector2f v2 = car2->getVectorVelocity();
+
+    sf::Vector2f er = oldCoin-coin;
+    if (norm(er) > 0)
+        er = er / norm(er);
+
+    float alpha = 0.75;
+    float gamma = 1e-4;
+    sf::Vector2f v_para = alpha*(er * scalar(er,v2-v1));
+
+    sf::Vector2f force = er;
+
+    force = force*gamma*norm(v_para);
+    er = coin-pos1;
+    car1->addAngularVelocity(cross(er,force));
+
+    er = coin-pos2;
+    car2->addAngularVelocity(-cross(er,force));
+
+    v1 += v_para;
+    v2 = -v2 + v_para;
+    car1->setVectorVelocity(v1);
+    car2->setVectorVelocity(v2);
 }

@@ -45,11 +45,22 @@ int main()
     //map.loadTxt("level1.txt");
     map.load();
  
-    Car car("voiture", map.getPlayerTexture());
-    car.loadFromFile("AC_002.png");
-    car.setSize(sf::Vector2i(32,48));
+    Car car("Blue", map.getPlayerTexture());
+    car.loadFromFile("car_blue_a.png");
+    car.setSize(sf::Vector2i(82,145));
     car.setPosition(sf::Vector2f(500,200));
+    car.setBouncer(map.getBouncer());
 
+    Car car2("Red", map.getPlayerTexture());
+    car2.loadFromFile("car_red_a.png");
+    car2.addAngularVelocity(8);
+    car2.setSize(sf::Vector2i(82,145));
+    car2.setPosition(sf::Vector2f(500,500));
+    car2.setBouncer(map.getBouncer());
+    car2.setKeyDefinition(sf::Keyboard::Z, sf::Keyboard::Up);
+    car2.setKeyDefinition(sf::Keyboard::S, sf::Keyboard::Down);
+    car2.setKeyDefinition(sf::Keyboard::Q, sf::Keyboard::Left);
+    car2.setKeyDefinition(sf::Keyboard::D, sf::Keyboard::Right);
 
     Interactive Int(&window, &map);
     map.addException(sf::Vector2i(0,0),0);
@@ -69,6 +80,7 @@ int main()
         
 
     int label = 0;
+    bool gameMode = false;
     bool printTime = false;
     while (window.isOpen())
     {
@@ -77,7 +89,7 @@ int main()
         time2 = clock2.restart();
         if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
         label++;
-        Int.testMouse(posMouse);
+        if (not gameMode) Int.testMouse(posMouse);
         time2 = clock2.restart();
 
         if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
@@ -95,10 +107,11 @@ int main()
         label++;
         while (window.pollEvent(event) and window.isOpen())
         {
-            Int.testEvent(event);
+            if (not gameMode) Int.testEvent(event);
             map.testEvent(event);
             lolita.testEvent(event);
             car.testEvent(event);
+            car2.testEvent(event);
             if (event.type == sf::Event::Closed)
             {
                 window.close();
@@ -106,7 +119,18 @@ int main()
             else if (event.type == sf::Event::MouseButtonPressed)
             {
                 if (event.mouseButton.button == sf::Mouse::Right)
-                    car.setPositionMap(posMouse);
+                {
+                    car.setPosition(sf::Vector2f(500,200));
+                    car2.setPosition(sf::Vector2f(500,500));
+                }
+            }
+            else if (event.type == sf::Event::KeyPressed)
+            {
+                if (event.key.code == sf::Keyboard::Escape)
+                {
+                    gameMode = not gameMode;
+                    map.setGameMode(gameMode);
+                }
             }
         }
         time2 = clock2.restart();
@@ -129,18 +153,29 @@ int main()
 
         if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
         label++;
+        lolita.draw(elapsedTime.asSeconds());
+        testCollision(&car, &car2);
+        car.draw(elapsedTime.asSeconds());
+        car2.draw(elapsedTime.asSeconds());
+        time2 = clock2.restart();
+
+        if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
+        label++;
+        if (gameMode)
+        {
+           sf::Vector2f center = car.getPosition();
+           center.x += car2.getPosition().x;
+           center.y += car2.getPosition().y;
+           center.x /= 2;
+           center.y /= 2;
+           map.setCenterViewGame(center);
+        }
         map.draw(elapsedTime.asSeconds());
         time2 = clock2.restart();
 
         if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
         label++;
-        lolita.draw(elapsedTime.asSeconds());
-        car.draw(elapsedTime.asSeconds());
-        time2 = clock2.restart();
-
-        if (printTime) cout<<"LABEL "<<label<<": "<<time2.asSeconds()<<endl;
-        label++;
-        Int.draw(elapsedTime.asSeconds());
+        if (not gameMode) Int.draw(elapsedTime.asSeconds());
         time2 = clock2.restart();
 
 

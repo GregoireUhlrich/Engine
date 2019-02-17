@@ -128,16 +128,27 @@ class Player: public Character{
     friend std::ostream& operator<<(std::ostream& f, const Player& user_object);
 };
 
+int sgn(float x);
+float modulo_2pi(float theta);
+float angle(float a, float b);
+
 class Car: public Character{
 
     private:
     
     float theta, dtheta;
-    float dv;
+    float thetaDir;
+    float omega;
+    float attenuation_omega;
+    float driftEffect;
+    float accroche;
+    float acceleration;
     float maxVelocity;
     sf::Keyboard::Key currentKey;
     float time;
+    float timeKey;
     float thresholdMove;
+    std::vector<int> keyDefinition;
     
     public:
     
@@ -151,10 +162,18 @@ class Car: public Character{
     sf::Keyboard::Key getCurrentKey() const;
     float getTime() const;
     float getThresholdMove() const;
+    float getTheta() const;
+    sf::Vector2i getSize() const;
+    bool isValid(sf::Vector2f newPos) const;
+    sf::Vector2f getVectorVelocity() const;
     
     void setTime(float user_time);
     void setThresholdMove(float user_thresholdMove);
     void setPositionMap(sf::Vector2i posMouse);
+    void setKeyDefinition(sf::Keyboard::Key keyToPress, sf::Keyboard::Key keyToUnderstand);
+    void setVelocity(float t_velocity);
+    void setVectorVelocity(sf::Vector2f vector);
+    void addAngularVelocity(float t_omega);
     
     void testEvent(sf::Event event);
     void draw(float elapsedTime);
@@ -162,6 +181,16 @@ class Car: public Character{
     Car& operator=(const Car& user_object);
     friend std::ostream& operator<<(std::ostream& f, const Car& user_object);
 };
+
+float distance(sf::Vector2f v1, sf::Vector2f v2);
+float distance(sf::Vector2i v1, sf::Vector2i v2);
+float scalar(sf::Vector2f v1, sf::Vector2f v2);
+float cross(sf::Vector2f v1, sf::Vector2f v2);
+float norm(sf::Vector2f v);
+float norm(sf::Vector2i v);
+sf::Vector2f rotation(float theta, sf::Vector2f v);
+void testCollision(Car* car1, Car* car2);
+void Collision(Car* car1, Car* car2, sf::Vector2f coin);
 
 #endif
 

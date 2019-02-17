@@ -93,6 +93,8 @@ ostream& operator<<(ostream& f, const Map& user_object)
 
 IMap::IMap(): Map()
 {
+    gameMode = false;
+    centerViewGame = sf::Vector2f(0,0);
     isMouseHere = isMousePressed = 0;
     posMouse = posClick = sf::Vector2i(0,0);
     delta = 0;
@@ -147,6 +149,10 @@ IMap::~IMap()
 StateMap IMap::getState() const { return state;}
 
 void IMap::setState(StateMap user_state) { state = user_state;}
+
+void IMap::setGameMode(bool t_gameMode) { gameMode = t_gameMode;}
+
+void IMap::setCenterViewGame(sf::Vector2f centerView) { centerViewGame = centerView;}
 
 void IMap::testMouse(sf::Vector2i user_posMouse)
 {
@@ -282,7 +288,7 @@ void IMap::updateSprite()
             fooSize.y *= ratioZoom;
             view.setCenter(center);
             view.setSize(fooSize);
-            bigRenderTexture.setView(view);
+            //bigRenderTexture.setView(view);
             
             delta = 0;
 
@@ -503,14 +509,14 @@ void IMap::draw(float elapsedTime)
             bigRenderTexture.draw(spritePlayers);
     }
     players.clear(sf::Color::Transparent);
-    if (grid)
+    if (grid and not gameMode)
     {
         for (int i=0; i<sizeMap.x-1; i++)
             bigRenderTexture.draw(gridX[i]);
         for (int i=0; i<sizeMap.y-1; i++)
             bigRenderTexture.draw(gridY[i]);
     }
-    if (pass)
+    if (pass and not gameMode)
     {
         sf::RectangleShape fooRect;
         fooRect.setSize(sf::Vector2f(sizeSprite.x,sizeSprite.y));
@@ -527,7 +533,7 @@ void IMap::draw(float elapsedTime)
             }
         }
     }
-    if (isGhostSprite and state == ADD)
+    if (isGhostSprite and state == ADD and not gameMode)
     {
         sf::Sprite ghostSprite;
         sf::Texture fooTexture = ghostTexture.getTexture();
@@ -552,12 +558,25 @@ void IMap::draw(float elapsedTime)
         ghostSprite.setColor(sf::Color(255,255,255,123));
         bigRenderTexture.draw(ghostSprite);
     }
-    if (select and (state == ADD or state == SELECT))
+    if (select and (state == ADD or state == SELECT) and not gameMode)
         bigRenderTexture.draw(selectRect);
 
     bigRenderTexture.draw(outline);
+    if (not gameMode) bigRenderTexture.setView(view);
+    else
+    {
+        sf::Vector2u size = target->getSize();
+        float xView = centerViewGame.x-size.x/2;
+        float yView = centerViewGame.y-size.y/2;
+        if (xView < 0) xView = 0;
+        if (xView > sizeMap.x*sizeSprite.x-size.x) xView = sizeMap.x*sizeSprite.x-size.x;    
+        if (yView < 0) yView = 0;
+        if (yView > sizeMap.y*sizeSprite.y-size.y) yView = sizeMap.y*sizeSprite.y-size.y;        
+        if (size.x > sizeMap.x*sizeSprite.x) xView = -(size.x-sizeMap.x*sizeSprite.x)/2;
+        if (size.y > sizeMap.y*sizeSprite.y) yView = -(size.y-sizeMap.y*sizeSprite.y)/2;
+        bigRenderTexture.setView(sf::View(sf::FloatRect(round(xView), round(yView),(float)size.x,(float)size.y)));
+    }
     bigRenderTexture.display();
-    bigRenderTexture.setView(view);
     bigRenderSprite.setTexture(bigRenderTexture.getTexture());
     bigRenderSprite.setPosition(0,0);
     if (target) target->draw(bigRenderSprite);

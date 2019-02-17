@@ -110,7 +110,7 @@ void Bouncer::addException(sf::Vector2i position, int direction)
     }
 }
 
-bool Bouncer::ask(sf::Vector2f position, sf::Vector2i sizeSprite, int direction)
+bool Bouncer::ask(sf::Vector2f position, sf::Vector2i sizeSprite, int direction) const
 {
     sf::Vector2f relativePosition = position;
     relativePosition.x /= sizeSprite.x;
@@ -147,9 +147,21 @@ bool Bouncer::ask(sf::Vector2f position, sf::Vector2i sizeSprite, int direction)
     }
     return 1;
 }
-bool Bouncer::ask(sf::Vector2i position)
+
+bool Bouncer::ask(sf::Vector2f position, sf::Vector2i sizeSprite) const
 {
-    if (position.x >= sizeMap.x or position.y >= sizeMap.y) return true;
+    sf::Vector2f relativePos;
+    relativePos.x = position.x/sizeSprite.x;
+    relativePos.y = position.y/sizeSprite.y;
+    if (relativePos.x >= sizeMap.x or relativePos.y >= sizeMap.y) return false;
+    if (relativePos.x < 0 or relativePos.y < 0) return false;
+    return true;
+}
+
+bool Bouncer::ask(sf::Vector2i position) const
+{
+    if (position.x >= sizeMap.x or position.y >= sizeMap.y) return false;
+    if (position.x < 0 or position.y < 0) return false;
     for (int i=0; i<4; i++)
         if (!passOrNot[position.x][position.y][i])
             return false;

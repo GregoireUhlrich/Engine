@@ -63,6 +63,8 @@ class IMap: public Map{
     sf::Sprite bigRenderSprite;
     sf::RectangleShape outline;
 
+    bool gameMode;
+    sf::Vector2f centerViewGame;
     bool isMouseHere;
     bool isMousePressed;
     sf::Vector2i posMouse;
@@ -99,6 +101,8 @@ class IMap: public Map{
     StateMap getState() const;
 
     void setState(StateMap user_state);
+    void setGameMode(bool t_gameMode);
+    void setCenterViewGame(sf::Vector2f centerView);
 
     void testMouse(sf::Vector2i posMouse);
     void setIsMouseHere(bool user_isMouseHere);
