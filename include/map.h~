@@ -111,7 +111,7 @@ class IMap: public Map{
     void setGrid(bool user_grid);
     void setPass(bool user_pass);
     void setGhost(std::string texture, sf::Vector2i nSpriteToPull, sf::Vector2i posSpriteToPull);
-    void addSpriteGhost();
+    void addSpriteGhost(sf::Vector2f ghostPos);
     int addTexture(std::string t);
     void resetTextureSprite();
     void removeTexture(int prio, int iT, std::string t);

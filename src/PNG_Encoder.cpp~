@@ -215,8 +215,8 @@ int PNG_Encoder::load()
             for (int k=0; k<nSprite[i][j]; k++)
             {
                 fooX = readInt(); fooY = readInt(); fooXPNG = readInt(); fooYPNG = readInt();
-                indexSprite[i][fooX/sizeSprite.x][fooY/sizeSprite.y][0] = j;
-                indexSprite[i][fooX/sizeSprite.x][fooY/sizeSprite.y][1] = k;
+                indexSprite[i][fooX][fooY][0] = j;
+                indexSprite[i][fooX][fooY][1] = k;
                 sprite[i][j][k].setPosition(fooX,fooY);
                 sprite[i][j][k].setTexture(texture[iTexture[i][j]]);
                 sprite[i][j][k].setTextureRect(sf::IntRect(fooXPNG,fooYPNG,sizeSprite.x,sizeSprite.y));
@@ -453,8 +453,8 @@ int PNG_Encoder::loadTxt(string stringFile)
                     for (int k=0; k<nSprite[i][j]; k++)
                     {
                         file>>fooX>>fooY>>fooXPNG>>fooYPNG>>foo;
-                        indexSprite[i][fooX/sizeSprite.x][fooY/sizeSprite.y][0] = j;
-                        indexSprite[i][fooX/sizeSprite.x][fooY/sizeSprite.y][1] = k;
+                        indexSprite[i][fooX][fooY][0] = j;
+                        indexSprite[i][fooX][fooY][1] = k;
                         sprite[i][j][k].setPosition(fooX,fooY);
                         sprite[i][j][k].setTexture(texture[iTexture[i][j]]);
                         sprite[i][j][k].setTextureRect(sf::IntRect(fooXPNG,fooYPNG,sizeSprite.x,sizeSprite.y));

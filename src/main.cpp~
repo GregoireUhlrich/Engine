@@ -41,7 +41,7 @@ int main()
     //lolita.setGrid(false);
     lolita.setPosition(sf::Vector2f(2*32,10*32));
        
-    IMap map(&window,"Maps/testMap.png");
+    IMap map(&window,"testMap.png");
     //map.loadTxt("Maps/testMap.txt");
     map.load();
  
